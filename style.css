@@ -4,7 +4,7 @@
   --sub: #777;
   --realWhite: #fff;
   --realBlack: #000;
-  --sidebar-w: 240px;
+  --sidebar-w: 320px;
   --captureBg: #22151f;
   --film-out: #839bc3;
 }
@@ -68,7 +68,7 @@ body {
 }
 
 .sidebar h2 {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--sub);
   margin: 24px 0 12px;
   letter-spacing: 0.05em;
@@ -84,7 +84,7 @@ body {
   border: 1px solid #ddd;
   border-radius: 6px;
   background: none;
-  font-size: 13.5px;
+  font-size: 14px;
   padding: 8px 10px;
   outline: none;
   transition:
@@ -103,7 +103,7 @@ body {
   border: 1px solid rgba(16, 16, 16, 0.1);
   border-radius: 10px;
   color: rgba(16, 16, 16, 0.6);
-  font-size: 13px;
+  font-size: 14px;
   padding: 9px 10px;
   box-sizing: border-box;
 }
@@ -115,12 +115,11 @@ body {
   gap: 6px;
   width: 100%;
   padding: 10px 12px;
-  margin-bottom: 8px;
   border-radius: 8px;
   border: 1px solid var(--ink);
   background: var(--ink);
   color: var(--realWhite);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -360,8 +359,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 10px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--sub);
 }
 

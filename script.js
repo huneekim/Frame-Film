@@ -1,52 +1,67 @@
-// 필름 구멍 생성
+// ==========================================
+// 1. Constants & State
+// ==========================================
+
+const CONFIG = {
+  SPROCKET: {
+    HOLE_W: 48,
+    FRAME_W: 960,
+    INSET: 16,
+    HOLES_PER_FRAME: 8,
+    FRAME_LEFTS: [-692, 320, 1332],
+  },
+  BARCODE: {
+    ANCHOR_LEFT: 62,
+    ANCHOR_CENTER: 566,
+    ANCHOR_RIGHT: 1074,
+    HALF_W_WIDE: 62,
+    HALF_W_NARROW: 30,
+    GAP: 12,
+    SRC_W: 1600,
+    SRC_H: 310,
+  },
+  PHOTO: {
+    FRAME_W: 960,
+    FRAME_H: 672,
+  },
+};
+
+const photoState = {
+  naturalW: 0,
+  naturalH: 0,
+  baseScale: 1,
+  offsetX: 0,
+  offsetY: 0,
+  scalePct: 100,
+};
+
+let fontsReadyPromise = null;
+
+// ==========================================
+// 2. Film Sprockets & Barcodes
+// ==========================================
 
 function fillSprockets(id) {
   const el = document.getElementById(id);
-  const holeW = 48;
-  const frameWidth = 960;
-  const inset = 16;
-  const holesPerFrame = 8;
-  const frameLefts = [-692, 320, 1332];
-  const usableSpan = frameWidth - inset * 2;
-  const step = (usableSpan - holeW) / (holesPerFrame - 1);
+  if (!el) return;
+
+  const { HOLE_W, FRAME_W, INSET, HOLES_PER_FRAME, FRAME_LEFTS } =
+    CONFIG.SPROCKET;
+  const usableSpan = FRAME_W - INSET * 2;
+  const step = (usableSpan - HOLE_W) / (HOLES_PER_FRAME - 1);
+
   let html = "";
-  frameLefts.forEach((frameLeft) => {
-    for (let i = 0; i < holesPerFrame; i++) {
-      const left = frameLeft + inset + i * step;
+  FRAME_LEFTS.forEach((frameLeft) => {
+    for (let i = 0; i < HOLES_PER_FRAME; i++) {
+      const left = frameLeft + INSET + i * step;
       html += `<span style="left:${left}px"></span>`;
     }
   });
   el.innerHTML = html;
 }
-fillSprockets("spTop");
-fillSprockets("spBottom");
 
-// 필름 바코드 생성
-
-function fillBarcodes(id) {
-  const el = document.getElementById(id);
-
-  const anchorLeft = 62;
-  const anchorCenter = 566;
-  const anchorRight = 1074;
-
-  const halfWidthWide = 62;
-  const halfWidthNarrow = 30;
-
-  const gap = 12;
-
-  const midSegments = [
-    [anchorLeft + halfWidthWide + gap, anchorCenter - halfWidthNarrow - gap],
-    [anchorCenter + halfWidthNarrow + gap, anchorRight - halfWidthWide - gap],
-  ];
-
-  const tileWidth = midSegments[0][1] - midSegments[0][0];
-  const margins = [
-    [-320, anchorLeft - halfWidthWide - gap],
-    [anchorRight + halfWidthWide + gap, 1280],
-  ];
-
-  const barRects = [
+function getBarRects() {
+  return [
     [0, 0, 52, 310],
     [52, 0, 52, 155],
     [103, 0, 52, 310],
@@ -73,9 +88,35 @@ function fillBarcodes(id) {
     [1497, 0, 52, 155],
     [1548, 0, 52, 310],
   ];
-  const srcW = 1600,
-    srcH = 310;
-  const bars = barRects
+}
+
+function fillBarcodes(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const {
+    ANCHOR_LEFT,
+    ANCHOR_CENTER,
+    ANCHOR_RIGHT,
+    HALF_W_WIDE,
+    HALF_W_NARROW,
+    GAP,
+    SRC_W,
+    SRC_H,
+  } = CONFIG.BARCODE;
+
+  const midSegments = [
+    [ANCHOR_LEFT + HALF_W_WIDE + GAP, ANCHOR_CENTER - HALF_W_NARROW - GAP],
+    [ANCHOR_CENTER + HALF_W_NARROW + GAP, ANCHOR_RIGHT - HALF_W_WIDE - GAP],
+  ];
+
+  const tileWidth = midSegments[0][1] - midSegments[0][0];
+  const margins = [
+    [-320, ANCHOR_LEFT - HALF_W_WIDE - GAP],
+    [ANCHOR_RIGHT + HALF_W_WIDE + GAP, 1280],
+  ];
+
+  const bars = getBarRects()
     .map(
       ([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" />`,
     )
@@ -88,122 +129,91 @@ function fillBarcodes(id) {
     if (width <= 0) return;
     html +=
       `<div class="barcode-mark" style="left:${left}px;width:${width}px">` +
-      `<svg viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg></div>`;
+      `<svg viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg></div>`;
   });
 
   margins.forEach(([left, right], idx) => {
     const marginWidth = right - left;
     if (marginWidth <= 0) return;
     html += `<div class="barcode-mark" style="left:${left}px;width:${marginWidth}px;overflow:hidden;">`;
+
     if (idx === 0) {
       const tileCount = Math.ceil(marginWidth / tileWidth);
       const startX = marginWidth - tileCount * tileWidth;
       for (let i = 0; i < tileCount; i++) {
         const x = startX + i * tileWidth;
-        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg>`;
+        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg>`;
       }
     } else {
       for (let x = 0; x < marginWidth; x += tileWidth) {
-        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg>`;
+        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg>`;
       }
     }
     html += `</div>`;
   });
+
   el.innerHTML = html;
 }
-fillBarcodes("filmBarcodes");
 
-// 입력창
+// ==========================================
+// 3. Text Binding & Frame Numbers
+// ==========================================
 
 function bindEditable(inputId, targetId) {
   const input = document.getElementById(inputId);
   const target = document.getElementById(targetId);
+  if (!input || !target) return;
+
   input.addEventListener("input", () => {
     target.textContent = input.value;
   });
 }
-bindEditable("inputPair", "pairText");
-bindEditable("inputAnniversary", "anniversaryText");
 
-const inputCenter = document.getElementById("inputCenter");
-const codeCenterText = document.getElementById("codeCenterText");
-const codeLeftText = document.getElementById("codeLeftText");
-const codeRightText = document.getElementById("codeRightText");
-const codeLeftText2 = document.getElementById("codeLeftText2");
-const codeRightText2 = document.getElementById("codeRightText2");
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
+const pad2 = (n) => String(n).padStart(2, "0");
 
 function updateFrameNumbers() {
+  const inputCenter = document.getElementById("inputCenter");
+  if (!inputCenter) return;
+
   const digits = inputCenter.value.replace(/[^0-9]/g, "");
   const mm = digits === "" ? 0 : parseInt(digits, 10);
-  codeCenterText.textContent = digits === "" ? "" : digits;
-  const nnLeft = mm - 1 < 0 ? 0 : mm;
+
+  document.getElementById("codeCenterText").textContent =
+    digits === "" ? "" : digits;
+
+  const nnLeft = Math.max(0, mm - 1);
   const nnRight = mm + 1;
-  codeLeftText.textContent = digits === "" ? "" : pad2(nnLeft);
-  codeRightText.textContent = digits === "" ? "" : pad2(nnRight);
-  codeLeftText2.textContent = digits === "" ? "" : `${pad2(nnLeft)}A`;
-  codeRightText2.textContent = digits === "" ? "" : `${pad2(nnRight)}A`;
+
+  document.getElementById("codeLeftText").textContent =
+    digits === "" ? "" : pad2(nnLeft);
+  document.getElementById("codeRightText").textContent =
+    digits === "" ? "" : pad2(nnRight);
+  document.getElementById("codeLeftText2").textContent =
+    digits === "" ? "" : `${pad2(nnLeft)}A`;
+  document.getElementById("codeRightText2").textContent =
+    digits === "" ? "" : `${pad2(nnRight)}A`;
 }
 
-inputCenter.addEventListener("input", () => {
-  const digits = inputCenter.value.replace(/[^0-9]/g, "");
-  if (digits !== inputCenter.value) inputCenter.value = digits;
-  updateFrameNumbers();
-  fillBarcodes("filmBarcodes");
-});
-updateFrameNumbers();
+// ==========================================
+// 4. Photo Manipulation & Dragging
+// ==========================================
 
-function fitStage() {
-  const wrapper = document.getElementById("scaleWrapper");
-  const vp = document.querySelector(".viewport");
-  const pad = 48;
-  const scale = Math.min(
-    (vp.clientWidth - pad) / 1600,
-    (vp.clientHeight - pad) / 900,
-    1,
-  );
-  wrapper.style.transform = `scale(${scale})`;
-  wrapper.style.width = `${1600 * scale}px`;
-  wrapper.style.height = `${900 * scale}px`;
-}
-fitStage();
-window.addEventListener("resize", () => {
-  fitStage();
-  fillBarcodes("filmBarcodes");
-});
-
-// 사진 삽입 · 드래그 이동 · 크기 조절
-
-const FRAME_W = 960,
-  FRAME_H = 672;
 const photoImgs = [
   document.getElementById("photoMain"),
   document.getElementById("photoLeft"),
   document.getElementById("photoRight"),
-];
-const photoInput = document.getElementById("photoInput");
-const photoScale = document.getElementById("photoScale");
-
-const photoState = {
-  naturalW: 0,
-  naturalH: 0,
-  baseScale: 1,
-  offsetX: 0,
-  offsetY: 0,
-  scalePct: 100,
-};
+].filter(Boolean);
 
 function renderPhoto() {
   if (!photoState.naturalW) return;
+  const { FRAME_W, FRAME_H } = CONFIG.PHOTO;
   const scale = photoState.baseScale * (photoState.scalePct / 100);
   const w = photoState.naturalW * scale;
   const h = photoState.naturalH * scale;
 
   const maxOffsetX = Math.max(0, (w - FRAME_W) / 2);
   const maxOffsetY = Math.max(0, (h - FRAME_H) / 2);
+
   photoState.offsetX = Math.min(
     maxOffsetX,
     Math.max(-maxOffsetX, photoState.offsetX),
@@ -224,141 +234,62 @@ function renderPhoto() {
   });
 }
 
-photoInput.addEventListener("change", () => {
-  const file = photoInput.files && photoInput.files[0];
-  if (!file) return;
-  const url = URL.createObjectURL(file);
-  const probe = new Image();
-  probe.onload = () => {
-    photoState.naturalW = probe.naturalWidth;
-    photoState.naturalH = probe.naturalHeight;
-    photoState.baseScale = Math.max(
-      FRAME_W / probe.naturalWidth,
-      FRAME_H / probe.naturalHeight,
-    );
-    photoState.offsetX = 0;
-    photoState.offsetY = 0;
-    photoState.scalePct = 100;
-    photoScale.value = 100;
-    photoImgs.forEach((img) => {
-      img.src = url;
-      img.classList.add("is-active");
+// ==========================================
+// 5. Filters & UI Controls
+// ==========================================
+
+function initFilters() {
+  const filterTypes = ["brightness", "contrast", "saturate", "sepia"];
+
+  filterTypes.forEach((type) => {
+    const slider = document.getElementById(`filter${capitalize(type)}`);
+    const num = document.getElementById(`filter${capitalize(type)}Num`);
+    if (!slider || !num) return;
+
+    slider.addEventListener("input", () => {
+      num.value = slider.value;
+      applyPhotoFilter();
     });
-    renderPhoto();
-  };
-  probe.src = url;
-});
 
-photoScale.addEventListener("input", () => {
-  photoState.scalePct = Number(photoScale.value);
-  renderPhoto();
-});
-
-let dragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let dragOffsetX0 = 0;
-let dragOffsetY0 = 0;
-
-function onPhotoPointerDown(e) {
-  if (!photoState.naturalW) return;
-  dragging = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  dragOffsetX0 = photoState.offsetX;
-  dragOffsetY0 = photoState.offsetY;
-  photoImgs.forEach((img) => img.classList.add("is-dragging"));
-  e.preventDefault();
+    num.addEventListener("input", () => {
+      let v = Number(num.value);
+      if (Number.isNaN(v)) return;
+      v = Math.min(Number(slider.max), Math.max(Number(slider.min), v));
+      slider.value = v;
+      applyPhotoFilter();
+    });
+  });
 }
 
-function onPhotoPointerMove(e) {
-  if (!dragging) return;
-  photoState.offsetX = dragOffsetX0 + (e.clientX - dragStartX);
-  photoState.offsetY = dragOffsetY0 + (e.clientY - dragStartY);
-  renderPhoto();
-}
-
-function onPhotoPointerUp() {
-  if (!dragging) return;
-  dragging = false;
-  photoImgs.forEach((img) => img.classList.remove("is-dragging"));
-}
-
-photoImgs.forEach((img) =>
-  img.addEventListener("mousedown", onPhotoPointerDown),
-);
-window.addEventListener("mousemove", onPhotoPointerMove);
-window.addEventListener("mouseup", onPhotoPointerUp);
-
-// 필터 - 밝기 · 대비 · 채도 · 세피아
-
-const filterInputs = {
-  brightness: document.getElementById("filterBrightness"),
-  contrast: document.getElementById("filterContrast"),
-  saturate: document.getElementById("filterSaturate"),
-  sepia: document.getElementById("filterSepia"),
-};
-const filterNumInputs = {
-  brightness: document.getElementById("filterBrightnessNum"),
-  contrast: document.getElementById("filterContrastNum"),
-  saturate: document.getElementById("filterSaturateNum"),
-  sepia: document.getElementById("filterSepiaNum"),
-};
-
-function updatePhotoFilter() {
-  const b = filterInputs.brightness.value;
-  const c = filterInputs.contrast.value;
-  const s = filterInputs.saturate.value;
-  const se = filterInputs.sepia.value;
-  const value = `brightness(${b}%) contrast(${c}%) saturate(${s}%) sepia(${se}%)`;
+function applyPhotoFilter() {
+  const getVal = (id) => document.getElementById(id)?.value || 100;
+  const value = `brightness(${getVal("filterBrightness")}%) contrast(${getVal("filterContrast")}%) saturate(${getVal("filterSaturate")}%) sepia(${getVal("filterSepia")}%)`;
   document.documentElement.style.setProperty("--photo-filter", value);
 }
 
-Object.keys(filterInputs).forEach((key) => {
-  const slider = filterInputs[key];
-  const num = filterNumInputs[key];
-  slider.addEventListener("input", () => {
-    num.value = slider.value;
-    updatePhotoFilter();
-  });
-  num.addEventListener("input", () => {
-    let v = Number(num.value);
-    if (Number.isNaN(v)) return;
-    const min = Number(slider.min);
-    const max = Number(slider.max);
-    v = Math.min(max, Math.max(min, v));
-    slider.value = v;
-    updatePhotoFilter();
-  });
-});
-updatePhotoFilter();
+function initNoiseControl() {
+  const noiseOpacity = document.getElementById("noiseOpacity");
+  const noiseOpacityNum = document.getElementById("noiseOpacityNum");
+  if (!noiseOpacity || !noiseOpacityNum) return;
 
-// 노이즈 불투명도
+  const updateNoise = (val) => {
+    const v = Math.min(100, Math.max(0, Number(val) || 0));
+    noiseOpacity.value = v;
+    noiseOpacityNum.value = v;
+    document.documentElement.style.setProperty("--noise-opacity", v / 100);
+  };
 
-const noiseOpacity = document.getElementById("noiseOpacity");
-const noiseOpacityNum = document.getElementById("noiseOpacityNum");
-
-function updateNoiseOpacity() {
-  document.documentElement.style.setProperty(
-    "--noise-opacity",
-    noiseOpacity.value / 100,
-  );
+  noiseOpacity.addEventListener("input", (e) => updateNoise(e.target.value));
+  noiseOpacityNum.addEventListener("input", (e) => updateNoise(e.target.value));
 }
 
-noiseOpacity.addEventListener("input", () => {
-  noiseOpacityNum.value = noiseOpacity.value;
-  updateNoiseOpacity();
-});
-noiseOpacityNum.addEventListener("input", () => {
-  let v = Number(noiseOpacityNum.value);
-  if (Number.isNaN(v)) return;
-  v = Math.min(100, Math.max(0, v));
-  noiseOpacity.value = v;
-  updateNoiseOpacity();
-});
-updateNoiseOpacity();
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
-// 캡처 (html-to-image 라이브러리 사용)
+// ==========================================
+// 6. Capture & Export
+// ==========================================
 
 async function waitForHtmlToImage(timeoutMs = 5000) {
   const start = Date.now();
@@ -372,9 +303,6 @@ async function waitForHtmlToImage(timeoutMs = 5000) {
   }
 }
 
-// document.fonts로 폰트를 로드
-
-let fontsReadyPromise = null;
 function ensureCaptureFontsLoaded() {
   if (fontsReadyPromise) return fontsReadyPromise;
   const weights = [300, 400, 500, 600, 700, 800];
@@ -386,14 +314,13 @@ function ensureCaptureFontsLoaded() {
   return fontsReadyPromise;
 }
 
-function blobToDataUrl(blob) {
-  return new Promise((resolve, reject) => {
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
-}
 
 async function captureViewport() {
   await waitForHtmlToImage();
@@ -402,16 +329,11 @@ async function captureViewport() {
   const target = document.getElementById("captureArea");
   const srcW = target.offsetWidth;
   const srcH = target.offsetHeight;
+  const pixelRatio = 1920 / srcW;
 
-  // 1920x1080 업스케일링 배율
-  
-  const outW = 1920;
-  const pixelRatio = outW / srcW;
-
-  // 캡처 직전에만 data URL로 임시 교체
-  // 원래 blob URL로 되돌려 메모리 사용을 늘리지 않음
   const swapped = [];
   const activePhotoImgs = target.querySelectorAll("img.frame-photo.is-active");
+
   for (const img of activePhotoImgs) {
     const src = img.getAttribute("src");
     if (src && src.startsWith("blob:")) {
@@ -422,13 +344,13 @@ async function captureViewport() {
         swapped.push({ img, original: src });
         img.src = dataUrl;
       } catch (e) {
-        console.warn("사진 blob→data URL 변환 실패, blob URL 그대로 사용", e);
+        console.warn("사진 blob→data URL 변환 실패:", e);
       }
     }
   }
 
   try {
-    const dataUrl = await window.htmlToImage.toPng(target, {
+    return await window.htmlToImage.toPng(target, {
       width: srcW,
       height: srcH,
       pixelRatio,
@@ -436,7 +358,6 @@ async function captureViewport() {
       backgroundColor: "#22151f",
       filter: (node) => node.tagName !== "SCRIPT",
     });
-    return dataUrl;
   } finally {
     swapped.forEach(({ img, original }) => {
       img.src = original;
@@ -444,22 +365,177 @@ async function captureViewport() {
   }
 }
 
-document.getElementById("captureBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("captureBtn");
-  btn.classList.add("is-busy");
-  try {
-    const dataUrl = await captureViewport();
-    const link = document.createElement("a");
-    link.download = "monofilm-a601.png";
-    link.href = dataUrl;
-    link.click();
-  } catch (err) {
-    console.error("capture failed:", err && err.message ? err.message : err);
-    console.error("전체 에러 객체:", err);
-    alert(
-      `이미지 저장에 실패했습니다: ${err && err.message ? err.message : "알 수 없는 오류"}\n콘솔 로그를 확인해주세요.`,
-    );
-  } finally {
-    btn.classList.remove("is-busy");
+function sanitizeFilenamePart(text) {
+  return text.replace(/[\\/:*?"<>|\r\n]+/g, "").trim();
+}
+
+function buildCaptureFilename() {
+  const pair = sanitizeFilenamePart(
+    document.getElementById("pairText")?.textContent || "",
+  );
+  const anniversary = sanitizeFilenamePart(
+    document.getElementById("anniversaryText")?.textContent || "",
+  );
+  const parts = ["Film", pair, anniversary].filter(Boolean);
+  return `${parts.join(" ")}.png`;
+}
+
+// ==========================================
+// 7. Initialization & Event Listeners
+// ==========================================
+
+function fitStage() {
+  const wrapper = document.getElementById("scaleWrapper");
+  const vp = document.querySelector(".viewport");
+  if (!wrapper || !vp) return;
+
+  const pad = 48;
+  const scale = Math.min(
+    (vp.clientWidth - pad) / 1600,
+    (vp.clientHeight - pad) / 900,
+    1,
+  );
+  wrapper.style.transform = `scale(${scale})`;
+  wrapper.style.width = `${1600 * scale}px`;
+  wrapper.style.height = `${900 * scale}px`;
+}
+
+function initEventListeners() {
+  // Sprockets & Barcodes Init
+  fillSprockets("spTop");
+  fillSprockets("spBottom");
+  fillBarcodes("filmBarcodes");
+
+  // Editable Bindings
+  bindEditable("inputPair", "pairText");
+  bindEditable("inputAnniversary", "anniversaryText");
+
+  // Frame Numbers Input
+  const inputCenter = document.getElementById("inputCenter");
+  if (inputCenter) {
+    inputCenter.addEventListener("input", () => {
+      const digits = inputCenter.value.replace(/[^0-9]/g, "");
+      if (digits !== inputCenter.value) inputCenter.value = digits;
+      updateFrameNumbers();
+      fillBarcodes("filmBarcodes");
+    });
   }
-});
+  updateFrameNumbers();
+
+  // Window Resize
+
+  window.addEventListener("resize", () => {
+    fitStage();
+    fillBarcodes("filmBarcodes");
+  });
+
+  // Photo Input Change
+
+  const photoInput = document.getElementById("photoInput");
+  const photoScale = document.getElementById("photoScale");
+
+  if (photoInput) {
+    photoInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const probe = new Image();
+      probe.onload = () => {
+        photoState.naturalW = probe.naturalWidth;
+        photoState.naturalH = probe.naturalHeight;
+        photoState.baseScale = Math.max(
+          CONFIG.PHOTO.FRAME_W / probe.naturalWidth,
+          CONFIG.PHOTO.FRAME_H / probe.naturalHeight,
+        );
+        photoState.offsetX = 0;
+        photoState.offsetY = 0;
+        photoState.scalePct = 100;
+        if (photoScale) photoScale.value = 100;
+
+        photoImgs.forEach((img) => {
+          img.src = url;
+          img.classList.add("is-active");
+        });
+        renderPhoto();
+      };
+      probe.src = url;
+    });
+  }
+
+  if (photoScale) {
+    photoScale.addEventListener("input", () => {
+      photoState.scalePct = Number(photoScale.value);
+      renderPhoto();
+    });
+  }
+
+  // Drag Events for Photos
+
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragOffsetX0 = 0;
+  let dragOffsetY0 = 0;
+
+  photoImgs.forEach((img) => {
+    img.addEventListener("mousedown", (e) => {
+      if (!photoState.naturalW) return;
+      dragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragOffsetX0 = photoState.offsetX;
+      dragOffsetY0 = photoState.offsetY;
+      photoImgs.forEach((el) => el.classList.add("is-dragging"));
+      e.preventDefault();
+    });
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    photoState.offsetX = dragOffsetX0 + (e.clientX - dragStartX);
+    photoState.offsetY = dragOffsetY0 + (e.clientY - dragStartY);
+    renderPhoto();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    photoImgs.forEach((img) => img.classList.remove("is-dragging"));
+  });
+
+  // Filters & Noise Setup
+
+  initFilters();
+  initNoiseControl();
+
+  // Capture Button Handler
+
+  const captureBtn = document.getElementById("captureBtn");
+  if (captureBtn) {
+    captureBtn.addEventListener("click", async () => {
+      captureBtn.classList.add("is-busy");
+      try {
+        const dataUrl = await captureViewport();
+        const link = document.createElement("a");
+        link.download = buildCaptureFilename();
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error("Capture failed:", err);
+        alert(
+          `이미지 저장에 실패했습니다: ${err?.message || "알 수 없는 오류"}\n콘솔 로그를 확인해주세요.`,
+        );
+      } finally {
+        captureBtn.classList.remove("is-busy");
+      }
+    });
+  }
+
+  // Initial Stage Fit
+
+  fitStage();
+}
+
+// Run Application
+
+document.addEventListener("DOMContentLoaded", initEventListeners);
