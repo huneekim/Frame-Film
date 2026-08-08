@@ -420,9 +420,7 @@ async function captureViewport() {
   // 안정적인 data URL로 임시 교체하고, 끝나면 원래 blob URL로
   // 되돌려 메모리 사용을 늘리지 않는다.
   const swapped = [];
-  const activePhotoImgs = target.querySelectorAll(
-    "img.frame-photo.is-active",
-  );
+  const activePhotoImgs = target.querySelectorAll("img.frame-photo.is-active");
   for (const img of activePhotoImgs) {
     const src = img.getAttribute("src");
     if (src && src.startsWith("blob:")) {
