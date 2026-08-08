@@ -1,541 +1,1721 @@
-// ==========================================
-// 1. Constants & State
-// ==========================================
-
-const CONFIG = {
-  SPROCKET: {
-    HOLE_W: 48,
-    FRAME_W: 960,
-    INSET: 16,
-    HOLES_PER_FRAME: 8,
-    FRAME_LEFTS: [-692, 320, 1332],
-  },
-  BARCODE: {
-    ANCHOR_LEFT: 62,
-    ANCHOR_CENTER: 566,
-    ANCHOR_RIGHT: 1074,
-    HALF_W_WIDE: 62,
-    HALF_W_NARROW: 30,
-    GAP: 12,
-    SRC_W: 1600,
-    SRC_H: 310,
-  },
-  PHOTO: {
-    FRAME_W: 960,
-    FRAME_H: 672,
-  },
-};
-
-const photoState = {
-  naturalW: 0,
-  naturalH: 0,
-  baseScale: 1,
-  offsetX: 0,
-  offsetY: 0,
-  scalePct: 100,
-};
-
-let fontsReadyPromise = null;
-
-// ==========================================
-// 2. Film Sprockets & Barcodes
-// ==========================================
-
-function fillSprockets(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-
-  const { HOLE_W, FRAME_W, INSET, HOLES_PER_FRAME, FRAME_LEFTS } =
-    CONFIG.SPROCKET;
-  const usableSpan = FRAME_W - INSET * 2;
-  const step = (usableSpan - HOLE_W) / (HOLES_PER_FRAME - 1);
-
-  let html = "";
-  FRAME_LEFTS.forEach((frameLeft) => {
-    for (let i = 0; i < HOLES_PER_FRAME; i++) {
-      const left = frameLeft + INSET + i * step;
-      html += `<span style="left:${left}px"></span>`;
-    }
-  });
-  el.innerHTML = html;
-}
-
-function getBarRects() {
-  return [
-    [0, 0, 52, 310],
-    [52, 0, 52, 155],
-    [103, 0, 52, 310],
-    [155, 0, 52, 155],
-    [206, 0, 52, 310],
-    [310, 0, 52, 310],
-    [413, 0, 52, 310],
-    [516, 0, 52, 155],
-    [568, 155, 52, 155],
-    [619, 0, 52, 155],
-    [723, 0, 52, 155],
-    [826, 0, 52, 310],
-    [877, 155, 52, 155],
-    [929, 0, 52, 155],
-    [981, 0, 52, 52],
-    [1032, 0, 52, 155],
-    [1084, 0, 52, 52],
-    [1084, 155, 52, 155],
-    [1135, 0, 52, 310],
-    [1187, 155, 52, 155],
-    [1239, 0, 52, 155],
-    [1342, 0, 52, 155],
-    [1445, 0, 52, 310],
-    [1497, 0, 52, 155],
-    [1548, 0, 52, 310],
-  ];
-}
-
-function fillBarcodes(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-
-  const {
-    ANCHOR_LEFT,
-    ANCHOR_CENTER,
-    ANCHOR_RIGHT,
-    HALF_W_WIDE,
-    HALF_W_NARROW,
-    GAP,
-    SRC_W,
-    SRC_H,
-  } = CONFIG.BARCODE;
-
-  const midSegments = [
-    [ANCHOR_LEFT + HALF_W_WIDE + GAP, ANCHOR_CENTER - HALF_W_NARROW - GAP],
-    [ANCHOR_CENTER + HALF_W_NARROW + GAP, ANCHOR_RIGHT - HALF_W_WIDE - GAP],
-  ];
-
-  const tileWidth = midSegments[0][1] - midSegments[0][0];
-  const margins = [
-    [-320, ANCHOR_LEFT - HALF_W_WIDE - GAP],
-    [ANCHOR_RIGHT + HALF_W_WIDE + GAP, 1280],
-  ];
-
-  const bars = getBarRects()
-    .map(
-      ([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" />`,
-    )
-    .join("");
-
-  let html = "";
-
-  midSegments.forEach(([left, right]) => {
-    const width = right - left;
-    if (width <= 0) return;
-    html +=
-      `<div class="barcode-mark" style="left:${left}px;width:${width}px">` +
-      `<svg viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg></div>`;
-  });
-
-  margins.forEach(([left, right], idx) => {
-    const marginWidth = right - left;
-    if (marginWidth <= 0) return;
-    html += `<div class="barcode-mark" style="left:${left}px;width:${marginWidth}px;overflow:hidden;">`;
-
-    if (idx === 0) {
-      const tileCount = Math.ceil(marginWidth / tileWidth);
-      const startX = marginWidth - tileCount * tileWidth;
-      for (let i = 0; i < tileCount; i++) {
-        const x = startX + i * tileWidth;
-        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg>`;
-      }
-    } else {
-      for (let x = 0; x < marginWidth; x += tileWidth) {
-        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${SRC_W} ${SRC_H}" preserveAspectRatio="none">${bars}</svg>`;
-      }
-    }
-    html += `</div>`;
-  });
-
-  el.innerHTML = html;
-}
-
-// ==========================================
-// 3. Text Binding & Frame Numbers
-// ==========================================
-
-function bindEditable(inputId, targetId) {
-  const input = document.getElementById(inputId);
-  const target = document.getElementById(targetId);
-  if (!input || !target) return;
-
-  input.addEventListener("input", () => {
-    target.textContent = input.value;
-  });
-}
-
-const pad2 = (n) => String(n).padStart(2, "0");
-
-function updateFrameNumbers() {
-  const inputCenter = document.getElementById("inputCenter");
-  if (!inputCenter) return;
-
-  const digits = inputCenter.value.replace(/[^0-9]/g, "");
-  const mm = digits === "" ? 0 : parseInt(digits, 10);
-
-  document.getElementById("codeCenterText").textContent =
-    digits === "" ? "" : digits;
-
-  const nnLeft = Math.max(0, mm - 1);
-  const nnRight = mm + 1;
-
-  document.getElementById("codeLeftText").textContent =
-    digits === "" ? "" : pad2(nnLeft);
-  document.getElementById("codeRightText").textContent =
-    digits === "" ? "" : pad2(nnRight);
-  document.getElementById("codeLeftText2").textContent =
-    digits === "" ? "" : `${pad2(nnLeft)}A`;
-  document.getElementById("codeRightText2").textContent =
-    digits === "" ? "" : `${pad2(nnRight)}A`;
-}
-
-// ==========================================
-// 4. Photo Manipulation & Dragging
-// ==========================================
-
-const photoImgs = [
-  document.getElementById("photoMain"),
-  document.getElementById("photoLeft"),
-  document.getElementById("photoRight"),
-].filter(Boolean);
-
-function renderPhoto() {
-  if (!photoState.naturalW) return;
-  const { FRAME_W, FRAME_H } = CONFIG.PHOTO;
-  const scale = photoState.baseScale * (photoState.scalePct / 100);
-  const w = photoState.naturalW * scale;
-  const h = photoState.naturalH * scale;
-
-  const maxOffsetX = Math.max(0, (w - FRAME_W) / 2);
-  const maxOffsetY = Math.max(0, (h - FRAME_H) / 2);
-
-  photoState.offsetX = Math.min(
-    maxOffsetX,
-    Math.max(-maxOffsetX, photoState.offsetX),
-  );
-  photoState.offsetY = Math.min(
-    maxOffsetY,
-    Math.max(-maxOffsetY, photoState.offsetY),
-  );
-
-  const left = FRAME_W / 2 - w / 2 + photoState.offsetX;
-  const top = FRAME_H / 2 - h / 2 + photoState.offsetY;
-
-  photoImgs.forEach((img) => {
-    img.style.width = `${w}px`;
-    img.style.height = `${h}px`;
-    img.style.left = `${left}px`;
-    img.style.top = `${top}px`;
-  });
-}
-
-// ==========================================
-// 5. Filters & UI Controls
-// ==========================================
-
-function initFilters() {
-  const filterTypes = ["brightness", "contrast", "saturate", "sepia"];
-
-  filterTypes.forEach((type) => {
-    const slider = document.getElementById(`filter${capitalize(type)}`);
-    const num = document.getElementById(`filter${capitalize(type)}Num`);
-    if (!slider || !num) return;
-
-    slider.addEventListener("input", () => {
-      num.value = slider.value;
-      applyPhotoFilter();
+document.addEventListener("DOMContentLoaded", function () {
+  document
+    .querySelectorAll('[contenteditable="true"]:not(.info-block__note)')
+    .forEach((el) => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+        }
+      });
     });
 
-    num.addEventListener("input", () => {
-      let v = Number(num.value);
-      if (Number.isNaN(v)) return;
-      v = Math.min(Number(slider.max), Math.max(Number(slider.min), v));
-      slider.value = v;
-      applyPhotoFilter();
+  //memo
+  document.querySelectorAll(".info-block__note").forEach((el) => {
+    const placeholder = el.textContent;
+
+    el.addEventListener("focus", () => {
+      if (el.textContent === placeholder) {
+        el.textContent = "";
+      }
+    });
+
+    el.addEventListener("blur", () => {
+      if (el.textContent.trim() === "") {
+        el.textContent = placeholder;
+      }
     });
   });
-}
 
-function applyPhotoFilter() {
-  const getVal = (id) => document.getElementById(id)?.value || 100;
-  const value = `brightness(${getVal("filterBrightness")}%) contrast(${getVal("filterContrast")}%) saturate(${getVal("filterSaturate")}%) sepia(${getVal("filterSepia")}%)`;
-  document.documentElement.style.setProperty("--photo-filter", value);
-}
+  // badge emoji slot
+  const EMOJI_CATEGORIES = [
+    {
+      name: "스마일리 · 감정",
+      icon: "😀",
+      emojis: [
+        "😀",
+        "😃",
+        "😄",
+        "😁",
+        "😆",
+        "😅",
+        "🤣",
+        "😂",
+        "🙂",
+        "🙃",
+        "🫠",
+        "😉",
+        "😊",
+        "😇",
+        "🥰",
+        "😍",
+        "🤩",
+        "😘",
+        "😗",
+        "☺️",
+        "😚",
+        "😙",
+        "🥲",
+        "😋",
+        "😛",
+        "😜",
+        "🤪",
+        "😝",
+        "🤑",
+        "🤗",
+        "🤭",
+        "🫢",
+        "🫣",
+        "🤫",
+        "🤔",
+        "🫡",
+        "🤐",
+        "🤨",
+        "😐",
+        "😑",
+        "😶",
+        "🫥",
+        "😶‍🌫️",
+        "😏",
+        "😒",
+        "🙄",
+        "😬",
+        "🤥",
+        "🫨",
+        "😌",
+        "😔",
+        "😪",
+        "🤤",
+        "😴",
+        "😷",
+        "🤒",
+        "🤕",
+        "🤢",
+        "🤮",
+        "🤧",
+        "🥵",
+        "🥶",
+        "🥴",
+        "😵",
+        "😵‍💫",
+        "🤯",
+        "🤠",
+        "🥳",
+        "🥸",
+        "😎",
+        "🤓",
+        "🧐",
+        "😕",
+        "🫤",
+        "😟",
+        "🙁",
+        "☹️",
+        "😮",
+        "😯",
+        "😲",
+        "😳",
+        "🥺",
+        "🥹",
+        "😦",
+        "😧",
+        "😨",
+        "😰",
+        "😥",
+        "😢",
+        "😭",
+        "😱",
+        "😖",
+        "😣",
+        "😞",
+        "😓",
+        "😩",
+        "😫",
+        "🥱",
+        "😤",
+        "😡",
+        "😠",
+        "🤬",
+        "😈",
+        "👿",
+        "💀",
+        "☠️",
+        "💩",
+        "🤡",
+        "👹",
+        "👺",
+        "👻",
+        "👽",
+        "👾",
+        "🤖",
+        "😺",
+        "😸",
+        "😹",
+        "😻",
+        "😼",
+        "😽",
+        "🙀",
+        "😿",
+        "😾",
+      ],
+    },
+    {
+      name: "사람 · 신체",
+      icon: "🙌",
+      emojis: [
+        "👋",
+        "🤚",
+        "🖐️",
+        "✋",
+        "🖖",
+        "🫱",
+        "🫲",
+        "🫳",
+        "🫴",
+        "🫷",
+        "🫸",
+        "👌",
+        "🤌",
+        "🤏",
+        "✌️",
+        "🤞",
+        "🫰",
+        "🤟",
+        "🤘",
+        "🤙",
+        "👈",
+        "👉",
+        "👆",
+        "🖕",
+        "👇",
+        "☝️",
+        "🫵",
+        "👍",
+        "👎",
+        "✊",
+        "👊",
+        "🤛",
+        "🤜",
+        "👏",
+        "🙌",
+        "🫶",
+        "👐",
+        "🤲",
+        "🤝",
+        "🙏",
+        "✍️",
+        "💅",
+        "🤳",
+        "💪",
+        "🦾",
+        "🦿",
+        "🦵",
+        "🦶",
+        "👂",
+        "🦻",
+        "👃",
+        "🧠",
+        "🫀",
+        "🫁",
+        "🦷",
+        "🦴",
+        "👀",
+        "👁️",
+        "👅",
+        "👄",
+        "🫦",
+        "👶",
+        "🧒",
+        "👦",
+        "👧",
+        "🧑",
+        "👱",
+        "👨",
+        "🧔",
+        "👩",
+        "🧓",
+        "👴",
+        "👵",
+        "🙍",
+        "🙎",
+        "🙅",
+        "🙆",
+        "💁",
+        "🙋",
+        "🧏",
+        "🙇",
+        "🤦",
+        "🤷",
+        "👮",
+        "🕵️",
+        "💂",
+        "🥷",
+        "👷",
+        "🫅",
+        "🤴",
+        "👸",
+        "👳",
+        "👲",
+        "🧕",
+        "🤵",
+        "👰",
+        "🤰",
+        "🫃",
+        "🫄",
+        "🤱",
+        "👼",
+        "🎅",
+        "🤶",
+        "🦸",
+        "🦹",
+        "🧙",
+        "🧚",
+        "🧛",
+        "🧜",
+        "🧝",
+        "🧞",
+        "🧟",
+        "🧌",
+        "💆",
+        "💇",
+        "🚶",
+        "🧍",
+        "🧎",
+        "🏃",
+        "💃",
+        "🕺",
+        "🕴️",
+        "👯",
+        "🧖",
+        "🧗",
+        "🤺",
+        "🏇",
+        "⛷️",
+        "🏂",
+        "🏌️",
+        "🏄",
+        "🚣",
+        "🏊",
+        "⛹️",
+        "🏋️",
+        "🚴",
+        "🚵",
+        "🤸",
+        "🤼",
+        "🤽",
+        "🤾",
+        "🤹",
+        "🧘",
+        "🛀",
+        "🛌",
+        "👭",
+        "👫",
+        "👬",
+        "💏",
+        "💑",
+        "👪",
+      ],
+    },
+    {
+      name: "동물 · 자연",
+      icon: "🐶",
+      emojis: [
+        "🐵",
+        "🐒",
+        "🦍",
+        "🦧",
+        "🐶",
+        "🐕",
+        "🦮",
+        "🐩",
+        "🐺",
+        "🦊",
+        "🦝",
+        "🐱",
+        "🐈",
+        "🐈‍⬛",
+        "🦁",
+        "🐯",
+        "🐅",
+        "🐆",
+        "🐴",
+        "🐎",
+        "🦄",
+        "🦓",
+        "🦌",
+        "🦬",
+        "🐮",
+        "🐂",
+        "🐃",
+        "🐄",
+        "🐷",
+        "🐖",
+        "🐗",
+        "🐽",
+        "🐏",
+        "🐑",
+        "🐐",
+        "🐪",
+        "🐫",
+        "🦙",
+        "🦒",
+        "🐘",
+        "🦣",
+        "🦏",
+        "🦛",
+        "🐭",
+        "🐁",
+        "🐀",
+        "🐹",
+        "🐰",
+        "🐇",
+        "🐿️",
+        "🦫",
+        "🦔",
+        "🦇",
+        "🐻",
+        "🐻‍❄️",
+        "🐨",
+        "🐼",
+        "🦥",
+        "🦦",
+        "🦨",
+        "🦘",
+        "🦡",
+        "🐾",
+        "🦃",
+        "🐔",
+        "🐓",
+        "🐣",
+        "🐤",
+        "🐥",
+        "🐦",
+        "🐧",
+        "🕊️",
+        "🦅",
+        "🦆",
+        "🦢",
+        "🦉",
+        "🦤",
+        "🪶",
+        "🦩",
+        "🦚",
+        "🦜",
+        "🪽",
+        "🐸",
+        "🐊",
+        "🐢",
+        "🦎",
+        "🐍",
+        "🐲",
+        "🐉",
+        "🦕",
+        "🦖",
+        "🐳",
+        "🐋",
+        "🐬",
+        "🦭",
+        "🐟",
+        "🐠",
+        "🐡",
+        "🦈",
+        "🐙",
+        "🐚",
+        "🪸",
+        "🪼",
+        "🐌",
+        "🦋",
+        "🐛",
+        "🐜",
+        "🐝",
+        "🪲",
+        "🐞",
+        "🦗",
+        "🪳",
+        "🕷️",
+        "🕸️",
+        "🦂",
+        "🦟",
+        "🪰",
+        "🪱",
+        "🦠",
+        "💐",
+        "🌸",
+        "💮",
+        "🪷",
+        "🏵️",
+        "🌹",
+        "🥀",
+        "🌺",
+        "🌻",
+        "🌼",
+        "🌷",
+        "🪻",
+        "🌱",
+        "🪴",
+        "🌲",
+        "🌳",
+        "🌴",
+        "🌵",
+        "🌾",
+        "🌿",
+        "☘️",
+        "🍀",
+        "🍁",
+        "🍂",
+        "🍃",
+        "🪹",
+        "🪺",
+        "🍄",
+        "🌰",
+      ],
+    },
+    {
+      name: "음식 · 음료",
+      icon: "🍔",
+      emojis: [
+        "🍇",
+        "🍈",
+        "🍉",
+        "🍊",
+        "🍋",
+        "🍌",
+        "🍍",
+        "🥭",
+        "🍎",
+        "🍏",
+        "🍐",
+        "🍑",
+        "🍒",
+        "🍓",
+        "🫐",
+        "🥝",
+        "🍅",
+        "🫒",
+        "🥥",
+        "🥑",
+        "🍆",
+        "🥔",
+        "🥕",
+        "🌽",
+        "🌶️",
+        "🫑",
+        "🥒",
+        "🥬",
+        "🥦",
+        "🧄",
+        "🧅",
+        "🍄",
+        "🥜",
+        "🫘",
+        "🌰",
+        "🍞",
+        "🥐",
+        "🥖",
+        "🫓",
+        "🥨",
+        "🥯",
+        "🥞",
+        "🧇",
+        "🧀",
+        "🍖",
+        "🍗",
+        "🥩",
+        "🥓",
+        "🍔",
+        "🍟",
+        "🍕",
+        "🌭",
+        "🥪",
+        "🌮",
+        "🌯",
+        "🫔",
+        "🥙",
+        "🧆",
+        "🥚",
+        "🍳",
+        "🥘",
+        "🍲",
+        "🫕",
+        "🥣",
+        "🥗",
+        "🍿",
+        "🧈",
+        "🧂",
+        "🥫",
+        "🍱",
+        "🍘",
+        "🍙",
+        "🍚",
+        "🍛",
+        "🍜",
+        "🍝",
+        "🍠",
+        "🍢",
+        "🍣",
+        "🍤",
+        "🍥",
+        "🥮",
+        "🍡",
+        "🥟",
+        "🥠",
+        "🥡",
+        "🦀",
+        "🦞",
+        "🦐",
+        "🦑",
+        "🦪",
+        "🍦",
+        "🍧",
+        "🍨",
+        "🍩",
+        "🍪",
+        "🎂",
+        "🍰",
+        "🧁",
+        "🥧",
+        "🍫",
+        "🍬",
+        "🍭",
+        "🍮",
+        "🍯",
+        "🍼",
+        "🥛",
+        "☕",
+        "🫖",
+        "🍵",
+        "🍶",
+        "🍾",
+        "🍷",
+        "🍸",
+        "🍹",
+        "🍺",
+        "🍻",
+        "🥂",
+        "🥃",
+        "🫗",
+        "🥤",
+        "🧋",
+        "🧃",
+        "🧉",
+        "🧊",
+        "🥢",
+        "🍽️",
+        "🍴",
+        "🥄",
+      ],
+    },
+    {
+      name: "여행 · 장소",
+      icon: "✈️",
+      emojis: [
+        "🌍",
+        "🌎",
+        "🌏",
+        "🌐",
+        "🗺️",
+        "🗾",
+        "🧭",
+        "🏔️",
+        "⛰️",
+        "🌋",
+        "🗻",
+        "🏕️",
+        "🏖️",
+        "🏜️",
+        "🏝️",
+        "🏞️",
+        "🏟️",
+        "🏛️",
+        "🏗️",
+        "🧱",
+        "🪨",
+        "🪵",
+        "🛖",
+        "🏘️",
+        "🏚️",
+        "🏠",
+        "🏡",
+        "🏢",
+        "🏣",
+        "🏤",
+        "🏥",
+        "🏦",
+        "🏨",
+        "🏩",
+        "🏪",
+        "🏫",
+        "🏬",
+        "🏭",
+        "🏯",
+        "🏰",
+        "💒",
+        "🗼",
+        "🗽",
+        "⛪",
+        "🕌",
+        "🛕",
+        "🕍",
+        "⛩️",
+        "🕋",
+        "⛲",
+        "⛺",
+        "🌁",
+        "🌃",
+        "🏙️",
+        "🌄",
+        "🌅",
+        "🌆",
+        "🌇",
+        "🌉",
+        "🎠",
+        "🎡",
+        "🎢",
+        "💈",
+        "🎪",
+        "🚂",
+        "🚃",
+        "🚄",
+        "🚅",
+        "🚆",
+        "🚇",
+        "🚈",
+        "🚉",
+        "🚊",
+        "🚝",
+        "🚞",
+        "🚋",
+        "🚌",
+        "🚍",
+        "🚎",
+        "🚐",
+        "🚑",
+        "🚒",
+        "🚓",
+        "🚔",
+        "🚕",
+        "🚖",
+        "🚗",
+        "🚘",
+        "🚙",
+        "🛻",
+        "🚚",
+        "🚛",
+        "🚜",
+        "🏎️",
+        "🏍️",
+        "🛵",
+        "🦽",
+        "🦼",
+        "🛺",
+        "🚲",
+        "🛴",
+        "🛹",
+        "🛼",
+        "🚏",
+        "🛣️",
+        "🛤️",
+        "🛢️",
+        "⛽",
+        "🛞",
+        "🚨",
+        "🚥",
+        "🚦",
+        "🛑",
+        "🚧",
+        "⚓",
+        "🛟",
+        "⛵",
+        "🛶",
+        "🚤",
+        "🛳️",
+        "⛴️",
+        "🛥️",
+        "🚢",
+        "✈️",
+        "🛩️",
+        "🛫",
+        "🛬",
+        "🪂",
+        "💺",
+        "🚁",
+        "🚟",
+        "🚠",
+        "🚡",
+        "🛰️",
+        "🚀",
+        "🛸",
+        "🛎️",
+        "🧳",
+        "⌛",
+        "⏳",
+        "⌚",
+        "⏰",
+        "⏱️",
+        "⏲️",
+        "🕰️",
+        "🌙",
+        "☀️",
+        "🌤️",
+        "⛅",
+        "🌦️",
+        "🌧️",
+        "⛈️",
+        "🌩️",
+        "🌨️",
+        "❄️",
+        "☃️",
+        "⛄",
+        "🌬️",
+        "💨",
+        "🌪️",
+        "🌫️",
+        "🌈",
+        "☂️",
+        "☔",
+        "⚡",
+        "❄️",
+      ],
+    },
+    {
+      name: "활동 · 스포츠",
+      icon: "⚽",
+      emojis: [
+        "🎃",
+        "🎄",
+        "🎆",
+        "🎇",
+        "🧨",
+        "✨",
+        "🎈",
+        "🎉",
+        "🎊",
+        "🎋",
+        "🎍",
+        "🎎",
+        "🎏",
+        "🎐",
+        "🎑",
+        "🧧",
+        "🎀",
+        "🎁",
+        "🎗️",
+        "🎟️",
+        "🎫",
+        "🎖️",
+        "🏆",
+        "🏅",
+        "🥇",
+        "🥈",
+        "🥉",
+        "⚽",
+        "⚾",
+        "🥎",
+        "🏀",
+        "🏐",
+        "🏈",
+        "🏉",
+        "🎾",
+        "🥏",
+        "🎳",
+        "🏏",
+        "🏑",
+        "🏒",
+        "🥍",
+        "🏓",
+        "🏸",
+        "🥊",
+        "🥋",
+        "🥅",
+        "⛳",
+        "⛸️",
+        "🎣",
+        "🤿",
+        "🎽",
+        "🎿",
+        "🛷",
+        "🥌",
+        "🎯",
+        "🪀",
+        "🪁",
+        "🔫",
+        "🎱",
+        "🔮",
+        "🪄",
+        "🎮",
+        "🕹️",
+        "🎰",
+        "🎲",
+        "🧩",
+        "🧸",
+        "🪅",
+        "🪩",
+        "🪆",
+        "♠️",
+        "♥️",
+        "♦️",
+        "♣️",
+        "♟️",
+        "🃏",
+        "🀄",
+        "🎴",
+        "🎭",
+        "🖼️",
+        "🎨",
+        "🧵",
+        "🪡",
+        "🧶",
+        "🪢",
+      ],
+    },
+    {
+      name: "사물",
+      icon: "💡",
+      emojis: [
+        "👓",
+        "🕶️",
+        "🥽",
+        "🥼",
+        "🦺",
+        "👔",
+        "👕",
+        "👖",
+        "🧣",
+        "🧤",
+        "🧥",
+        "🧦",
+        "👗",
+        "👘",
+        "🥻",
+        "🩱",
+        "🩲",
+        "🩳",
+        "👙",
+        "👚",
+        "👛",
+        "👜",
+        "👝",
+        "🛍️",
+        "🎒",
+        "🩴",
+        "👞",
+        "👟",
+        "🥾",
+        "🥿",
+        "👠",
+        "👡",
+        "🩰",
+        "👢",
+        "👑",
+        "👒",
+        "🎩",
+        "🎓",
+        "🧢",
+        "🪖",
+        "⛑️",
+        "📿",
+        "💄",
+        "💍",
+        "💎",
+        "🔇",
+        "🔈",
+        "🔉",
+        "🔊",
+        "📢",
+        "📣",
+        "📯",
+        "🔔",
+        "🔕",
+        "🎼",
+        "🎵",
+        "🎶",
+        "🎙️",
+        "🎚️",
+        "🎛️",
+        "🎤",
+        "🎧",
+        "📻",
+        "🎷",
+        "🪗",
+        "🎸",
+        "🎹",
+        "🎺",
+        "🎻",
+        "🪕",
+        "🥁",
+        "🪘",
+        "📱",
+        "📲",
+        "☎️",
+        "📞",
+        "📟",
+        "📠",
+        "🔋",
+        "🪫",
+        "🔌",
+        "💻",
+        "🖥️",
+        "🖨️",
+        "⌨️",
+        "🖱️",
+        "🖲️",
+        "💽",
+        "💾",
+        "💿",
+        "📀",
+        "🧮",
+        "🎥",
+        "🎞️",
+        "📽️",
+        "🎬",
+        "📺",
+        "📷",
+        "📸",
+        "📹",
+        "📼",
+        "🔍",
+        "🔎",
+        "🕯️",
+        "💡",
+        "🔦",
+        "🏮",
+        "🪔",
+        "📔",
+        "📕",
+        "📖",
+        "📗",
+        "📘",
+        "📙",
+        "📚",
+        "📓",
+        "📒",
+        "📃",
+        "📜",
+        "📄",
+        "📰",
+        "🗞️",
+        "📑",
+        "🔖",
+        "🏷️",
+        "💰",
+        "🪙",
+        "💴",
+        "💵",
+        "💶",
+        "💷",
+        "💸",
+        "💳",
+        "🧾",
+        "✉️",
+        "📧",
+        "📨",
+        "📩",
+        "📤",
+        "📥",
+        "📦",
+        "📫",
+        "📪",
+        "📬",
+        "📭",
+        "📮",
+        "🗳️",
+        "✏️",
+        "✒️",
+        "🖋️",
+        "🖊️",
+        "🖌️",
+        "🖍️",
+        "📝",
+        "💼",
+        "📁",
+        "📂",
+        "🗂️",
+        "📅",
+        "📆",
+        "🗒️",
+        "🗓️",
+        "📇",
+        "📈",
+        "📉",
+        "📊",
+        "📋",
+        "📌",
+        "📍",
+        "📎",
+        "🖇️",
+        "📏",
+        "📐",
+        "✂️",
+        "🗃️",
+        "🗄️",
+        "🗑️",
+        "🔒",
+        "🔓",
+        "🔏",
+        "🔐",
+        "🔑",
+        "🗝️",
+        "🔨",
+        "🪓",
+        "⛏️",
+        "⚒️",
+        "🛠️",
+        "🗡️",
+        "⚔️",
+        "💣",
+        "🪃",
+        "🏹",
+        "🛡️",
+        "🪚",
+        "🔧",
+        "🪛",
+        "🔩",
+        "⚙️",
+        "🗜️",
+        "⚖️",
+        "🦯",
+        "🔗",
+        "⛓️",
+        "🪝",
+        "🧰",
+        "🧲",
+        "🪜",
+        "⚗️",
+        "🧪",
+        "🧫",
+        "🧬",
+        "🔬",
+        "🔭",
+        "📡",
+        "💉",
+        "🩸",
+        "💊",
+        "🩹",
+        "🩼",
+        "🩺",
+        "🚪",
+        "🛗",
+        "🪞",
+        "🪟",
+        "🛏️",
+        "🛋️",
+        "🪑",
+        "🚽",
+        "🪠",
+        "🚿",
+        "🛁",
+        "🪤",
+        "🪒",
+        "🧴",
+        "🧷",
+        "🧹",
+        "🧺",
+        "🧻",
+        "🪣",
+        "🧼",
+        "🫧",
+        "🪥",
+        "🧽",
+        "🧯",
+        "🛒",
+      ],
+    },
+    {
+      name: "기호",
+      icon: "❤️",
+      emojis: [
+        "❤️",
+        "🧡",
+        "💛",
+        "💚",
+        "💙",
+        "💜",
+        "🖤",
+        "🤍",
+        "🤎",
+        "💔",
+        "❤️‍🔥",
+        "❤️‍🩹",
+        "❣️",
+        "💕",
+        "💞",
+        "💓",
+        "💗",
+        "💖",
+        "💘",
+        "💝",
+        "💟",
+        "☮️",
+        "✝️",
+        "☪️",
+        "🕉️",
+        "☸️",
+        "✡️",
+        "🔯",
+        "🕎",
+        "☯️",
+        "☦️",
+        "🛐",
+        "⛎",
+        "♈",
+        "♉",
+        "♊",
+        "♋",
+        "♌",
+        "♍",
+        "♎",
+        "♏",
+        "♐",
+        "♑",
+        "♒",
+        "♓",
+        "🆔",
+        "⚛️",
+        "🉑",
+        "☢️",
+        "☣️",
+        "📴",
+        "📳",
+        "🈶",
+        "🈚",
+        "🈸",
+        "🈺",
+        "🈷️",
+        "✴️",
+        "🆚",
+        "💮",
+        "🉐",
+        "㊙️",
+        "㊗️",
+        "🈴",
+        "🈵",
+        "🈹",
+        "🈲",
+        "🅰️",
+        "🅱️",
+        "🆎",
+        "🆑",
+        "🅾️",
+        "🆘",
+        "❌",
+        "⭕",
+        "🛑",
+        "⛔",
+        "📛",
+        "🚫",
+        "💯",
+        "💢",
+        "♨️",
+        "🚷",
+        "🚯",
+        "🚳",
+        "🚱",
+        "🔞",
+        "📵",
+        "🚭",
+        "❗",
+        "❕",
+        "❓",
+        "❔",
+        "‼️",
+        "⁉️",
+        "🔅",
+        "🔆",
+        "〽️",
+        "⚠️",
+        "🚸",
+        "🔱",
+        "⚜️",
+        "🔰",
+        "♻️",
+        "✅",
+        "🈯",
+        "💹",
+        "❇️",
+        "✳️",
+        "❎",
+        "🌐",
+        "💠",
+        "Ⓜ️",
+        "🌀",
+        "💤",
+        "🏧",
+        "🚾",
+        "♿",
+        "🅿️",
+        "🛗",
+        "🈳",
+        "🈂️",
+        "🛂",
+        "🛃",
+        "🛄",
+        "🛅",
+        "🚹",
+        "🚺",
+        "🚼",
+        "⚧️",
+        "🚻",
+        "🚮",
+        "🎦",
+        "📶",
+        "🈁",
+        "🔣",
+        "ℹ️",
+        "🔤",
+        "🔡",
+        "🔠",
+        "🆖",
+        "🆗",
+        "🆙",
+        "🆒",
+        "🆕",
+        "🆓",
+        "0️⃣",
+        "1️⃣",
+        "2️⃣",
+        "3️⃣",
+        "4️⃣",
+        "5️⃣",
+        "6️⃣",
+        "7️⃣",
+        "8️⃣",
+        "9️⃣",
+        "🔟",
+        "🔢",
+        "#️⃣",
+        "*️⃣",
+        "⏏️",
+        "▶️",
+        "⏸️",
+        "⏯️",
+        "⏹️",
+        "⏺️",
+        "⏭️",
+        "⏮️",
+        "⏩",
+        "⏪",
+        "⏫",
+        "⏬",
+        "◀️",
+        "🔼",
+        "🔽",
+        "➡️",
+        "⬅️",
+        "⬆️",
+        "⬇️",
+        "↗️",
+        "↘️",
+        "↙️",
+        "↖️",
+        "↕️",
+        "↔️",
+        "↪️",
+        "↩️",
+        "⤴️",
+        "⤵️",
+        "🔀",
+        "🔁",
+        "🔂",
+        "🔄",
+        "🔃",
+        "🎵",
+        "🎶",
+        "➕",
+        "➖",
+        "➗",
+        "✖️",
+        "🟰",
+        "♾️",
+        "💲",
+        "💱",
+        "™️",
+        "©️",
+        "®️",
+        "👁️‍🗨️",
+        "🔚",
+        "🔙",
+        "🔛",
+        "🔝",
+        "🔜",
+        "〰️",
+        "➰",
+        "➿",
+        "✔️",
+        "☑️",
+        "🔘",
+        "🔴",
+        "🟠",
+        "🟡",
+        "🟢",
+        "🔵",
+        "🟣",
+        "🟤",
+        "⚫",
+        "⚪",
+        "🟥",
+        "🟧",
+        "🟨",
+        "🟩",
+        "🟦",
+        "🟪",
+        "🟫",
+        "⬛",
+        "⬜",
+        "◼️",
+        "◻️",
+        "◾",
+        "◽",
+        "▪️",
+        "▫️",
+        "🔶",
+        "🔷",
+        "🔸",
+        "🔹",
+        "🔺",
+        "🔻",
+        "💠",
+        "🔲",
+        "🔳",
+      ],
+    },
+    {
+      name: "깃발",
+      icon: "🏁",
+      emojis: [
+        "🏁",
+        "🚩",
+        "🎌",
+        "🏴",
+        "🏳️",
+        "🏳️‍🌈",
+        "🏳️‍⚧️",
+        "🏴‍☠️",
+        "🇰🇷",
+        "🇺🇸",
+        "🇯🇵",
+        "🇨🇳",
+        "🇬🇧",
+        "🇫🇷",
+        "🇩🇪",
+        "🇮🇹",
+        "🇪🇸",
+        "🇨🇦",
+        "🇦🇺",
+        "🇧🇷",
+        "🇮🇳",
+        "🇷🇺",
+        "🇲🇽",
+        "🇳🇱",
+        "🇸🇪",
+        "🇨🇭",
+        "🇸🇬",
+        "🇹🇭",
+        "🇻🇳",
+        "🇵🇭",
+        "🇮🇩",
+        "🇹🇼",
+        "🇭🇰",
+        "🇳🇿",
+        "🇦🇷",
+        "🇿🇦",
+        "🇹🇷",
+        "🇸🇦",
+        "🇦🇪",
+        "🇪🇬",
+        "🇵🇹",
+        "🇬🇷",
+        "🇵🇱",
+        "🇦🇹",
+        "🇧🇪",
+        "🇩🇰",
+        "🇫🇮",
+        "🇳🇴",
+        "🇮🇪",
+        "🇮🇱",
+        "🇲🇾",
+        "🇺🇳",
+      ],
+    },
+  ];
 
-function initNoiseControl() {
-  const noiseOpacity = document.getElementById("noiseOpacity");
-  const noiseOpacityNum = document.getElementById("noiseOpacityNum");
-  if (!noiseOpacity || !noiseOpacityNum) return;
-
-  const updateNoise = (val) => {
-    const v = Math.min(100, Math.max(0, Number(val) || 0));
-    noiseOpacity.value = v;
-    noiseOpacityNum.value = v;
-    document.documentElement.style.setProperty("--noise-opacity", v / 100);
+  // twemoji jsDelivr
+  const TWEMOJI_OPTIONS = {
+    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+    folder: "svg",
+    ext: ".svg",
   };
 
-  noiseOpacity.addEventListener("input", (e) => updateNoise(e.target.value));
-  noiseOpacityNum.addEventListener("input", (e) => updateNoise(e.target.value));
-}
+  let activePopover = null;
 
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// ==========================================
-// 6. Capture & Export
-// ==========================================
-
-async function waitForHtmlToImage(timeoutMs = 5000) {
-  const start = Date.now();
-  while (!window.htmlToImage) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error(
-        "html-to-image 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.",
-      );
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
-}
-
-function ensureCaptureFontsLoaded() {
-  if (fontsReadyPromise) return fontsReadyPromise;
-  const weights = [300, 400, 500, 600, 700, 800];
-  fontsReadyPromise = Promise.all(
-    weights.map((w) =>
-      document.fonts.load(`${w} 32px "PyeojinGothic"`).catch(() => {}),
-    ),
-  ).then(() => document.fonts.ready);
-  return fontsReadyPromise;
-}
-
-const blobToDataUrl = (blob) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-
-async function captureViewport() {
-  await waitForHtmlToImage();
-  await ensureCaptureFontsLoaded();
-
-  const target = document.getElementById("captureArea");
-  const srcW = target.offsetWidth;
-  const srcH = target.offsetHeight;
-  const pixelRatio = 1920 / srcW;
-
-  const swapped = [];
-  const activePhotoImgs = target.querySelectorAll("img.frame-photo.is-active");
-
-  for (const img of activePhotoImgs) {
-    const src = img.getAttribute("src");
-    if (src && src.startsWith("blob:")) {
-      try {
-        const res = await fetch(src);
-        const blob = await res.blob();
-        const dataUrl = await blobToDataUrl(blob);
-        swapped.push({ img, original: src });
-        img.src = dataUrl;
-      } catch (e) {
-        console.warn("사진 blob→data URL 변환 실패:", e);
+  function closePopover() {
+    if (activePopover) {
+      if (activePopover._reposition) {
+        window.removeEventListener("scroll", activePopover._reposition, true);
+        window.removeEventListener("resize", activePopover._reposition);
       }
+      activePopover.remove();
+      activePopover = null;
+    }
+    document.removeEventListener("click", handlePopoverOutsideClick, true);
+  }
+
+  function handlePopoverOutsideClick(e) {
+    if (activePopover && !activePopover.contains(e.target)) {
+      closePopover();
     }
   }
 
-  try {
-    return await window.htmlToImage.toPng(target, {
-      width: srcW,
-      height: srcH,
-      pixelRatio,
-      skipFonts: true,
-      backgroundColor: "#22151f",
-      filter: (node) => node.tagName !== "SCRIPT",
+  function renderEmojiGrid(gridEl, categoryIndex, targetEl) {
+    gridEl.innerHTML = "";
+    EMOJI_CATEGORIES[categoryIndex].emojis.forEach((emoji) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "emoji-popover__item";
+      btn.textContent = emoji;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        targetEl.textContent = emoji;
+        if (window.twemoji) twemoji.parse(targetEl, TWEMOJI_OPTIONS);
+        closePopover();
+      });
+      gridEl.appendChild(btn);
     });
-  } finally {
-    swapped.forEach(({ img, original }) => {
-      img.src = original;
-    });
+    if (window.twemoji) twemoji.parse(gridEl, TWEMOJI_OPTIONS);
   }
-}
 
-function sanitizeFilenamePart(text) {
-  return text.replace(/[\\/:*?"<>|\r\n]+/g, "").trim();
-}
+  function positionPopover(popover, targetEl) {
+    const rect = targetEl.getBoundingClientRect();
+    const popW = popover.offsetWidth || 322;
+    const popH = popover.offsetHeight || 120;
+    const margin = 6;
 
-function buildCaptureFilename() {
-  const pair = sanitizeFilenamePart(
-    document.getElementById("pairText")?.textContent || "",
-  );
-  const anniversary = sanitizeFilenamePart(
-    document.getElementById("anniversaryText")?.textContent || "",
-  );
-  const parts = ["Film", pair, anniversary].filter(Boolean);
-  return `${parts.join(" ")}.png`;
-}
+    let left = rect.left;
+    let top = rect.bottom + margin;
 
-// ==========================================
-// 7. Initialization & Event Listeners
-// ==========================================
+    if (left + popW > window.innerWidth - margin) {
+      left = window.innerWidth - popW - margin;
+    }
+    if (left < margin) left = margin;
 
-function fitStage() {
-  const wrapper = document.getElementById("scaleWrapper");
-  const vp = document.querySelector(".viewport");
-  if (!wrapper || !vp) return;
+    if (top + popH > window.innerHeight - margin) {
+      top = rect.top - popH - margin;
+    }
+    if (top < margin) top = margin;
 
-  const pad = 48;
-  const scale = Math.min(
-    (vp.clientWidth - pad) / 1600,
-    (vp.clientHeight - pad) / 900,
-    1,
-  );
-  wrapper.style.transform = `scale(${scale})`;
-  wrapper.style.width = `${1600 * scale}px`;
-  wrapper.style.height = `${900 * scale}px`;
-}
-
-function initEventListeners() {
-  // Sprockets & Barcodes Init
-  fillSprockets("spTop");
-  fillSprockets("spBottom");
-  fillBarcodes("filmBarcodes");
-
-  // Editable Bindings
-  bindEditable("inputPair", "pairText");
-  bindEditable("inputAnniversary", "anniversaryText");
-
-  // Frame Numbers Input
-  const inputCenter = document.getElementById("inputCenter");
-  if (inputCenter) {
-    inputCenter.addEventListener("input", () => {
-      const digits = inputCenter.value.replace(/[^0-9]/g, "");
-      if (digits !== inputCenter.value) inputCenter.value = digits;
-      updateFrameNumbers();
-      fillBarcodes("filmBarcodes");
-    });
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
   }
-  updateFrameNumbers();
 
-  // Window Resize
+  function openEmojiPopover(targetEl) {
+    closePopover();
 
-  window.addEventListener("resize", () => {
-    fitStage();
-    fillBarcodes("filmBarcodes");
+    const popover = document.createElement("div");
+    popover.className = "emoji-popover";
+
+    const tabs = document.createElement("div");
+    tabs.className = "emoji-popover__tabs";
+
+    const grid = document.createElement("div");
+    grid.className = "emoji-popover__grid";
+
+    EMOJI_CATEGORIES.forEach((category, index) => {
+      const tabBtn = document.createElement("button");
+      tabBtn.type = "button";
+      tabBtn.className = "emoji-popover__tab";
+      tabBtn.textContent = category.icon;
+      tabBtn.title = category.name;
+      tabBtn.setAttribute("aria-label", category.name);
+      if (index === 0) tabBtn.classList.add("emoji-popover__tab--active");
+
+      tabBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tabs
+          .querySelectorAll(".emoji-popover__tab")
+          .forEach((t) => t.classList.remove("emoji-popover__tab--active"));
+        tabBtn.classList.add("emoji-popover__tab--active");
+        renderEmojiGrid(grid, index, targetEl);
+      });
+
+      tabs.appendChild(tabBtn);
+    });
+
+    popover.appendChild(tabs);
+    popover.appendChild(grid);
+    renderEmojiGrid(grid, 0, targetEl);
+    if (window.twemoji) twemoji.parse(tabs, TWEMOJI_OPTIONS);
+
+    document.body.appendChild(popover);
+    activePopover = popover;
+    positionPopover(popover, targetEl);
+
+    const reposition = () => positionPopover(popover, targetEl);
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    popover._reposition = reposition;
+
+    setTimeout(() => {
+      document.addEventListener("click", handlePopoverOutsideClick, true);
+    }, 0);
+  }
+
+  document.querySelectorAll('[data-emoji-slot="true"]').forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (activePopover && el.contains(activePopover)) {
+        closePopover();
+      } else {
+        openEmojiPopover(el);
+      }
+    });
   });
 
-  // Photo Input Change
+  // coloris
+  if (window.Coloris) {
+    Coloris({
+      el: ".role-list__color-input",
+      wrap: false,
+      theme: "pill",
+      themeMode: "dark",
+      format: "hex",
+      alpha: false,
+      focusInput: false,
+    });
 
-  const photoInput = document.getElementById("photoInput");
-  const photoScale = document.getElementById("photoScale");
+    // badge background color
+    document.addEventListener("coloris:pick", (event) => {
+      const input = event.detail.currentEl;
+      if (input && input.classList.contains("role-list__color-input")) {
+        const badge = input.closest(".role-list__badge");
+        if (badge) badge.style.background = event.detail.color;
+      }
+    });
+  }
 
-  if (photoInput) {
-    photoInput.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  // twitter emoji rendering
+  if (window.twemoji) {
+    twemoji.parse(document.body, TWEMOJI_OPTIONS);
+  }
+
+  // ── 카드(보드) 사진 삽입 & 드래그 이동 ─────────────────────────
+  document.querySelectorAll("[data-photo-card]").forEach((card) => {
+    const input = card.querySelector(".card__file-input");
+    const img = card.querySelector(".card__photo");
+    if (!input || !img) return;
+
+    const state = {
+      naturalW: 0,
+      naturalH: 0,
+      baseScale: 1,
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+    };
+
+    function render() {
+      const s = state.baseScale * state.scale;
+      img.style.width = `${state.naturalW * s}px`;
+      img.style.height = `${state.naturalH * s}px`;
+      img.style.transform = `translate(${state.offsetX}px, ${state.offsetY}px)`;
+    }
+
+    function clampOffset() {
+      const w = card.clientWidth;
+      const h = card.clientHeight;
+      const s = state.baseScale * state.scale;
+      const imgW = state.naturalW * s;
+      const imgH = state.naturalH * s;
+      const minX = Math.min(0, w - imgW);
+      const minY = Math.min(0, h - imgH);
+      state.offsetX = Math.min(0, Math.max(minX, state.offsetX));
+      state.offsetY = Math.min(0, Math.max(minY, state.offsetY));
+    }
+
+    function loadFile(file) {
+      if (!file || !file.type || !file.type.startsWith("image/")) return;
       const url = URL.createObjectURL(file);
       const probe = new Image();
       probe.onload = () => {
-        photoState.naturalW = probe.naturalWidth;
-        photoState.naturalH = probe.naturalHeight;
-        photoState.baseScale = Math.max(
-          CONFIG.PHOTO.FRAME_W / probe.naturalWidth,
-          CONFIG.PHOTO.FRAME_H / probe.naturalHeight,
-        );
-        photoState.offsetX = 0;
-        photoState.offsetY = 0;
-        photoState.scalePct = 100;
-        if (photoScale) photoScale.value = 100;
-
-        photoImgs.forEach((img) => {
-          img.src = url;
-          img.classList.add("is-active");
-        });
-        renderPhoto();
+        state.naturalW = probe.naturalWidth;
+        state.naturalH = probe.naturalHeight;
+        const w = card.clientWidth;
+        const h = card.clientHeight;
+        state.baseScale = Math.max(w / state.naturalW, h / state.naturalH);
+        state.scale = 1;
+        const s = state.baseScale;
+        state.offsetX = (w - state.naturalW * s) / 2;
+        state.offsetY = (h - state.naturalH * s) / 2;
+        img.src = url;
+        card.classList.add("has-photo");
+        clampOffset();
+        render();
       };
       probe.src = url;
+    }
+
+    // 카드 클릭 시 사진 선택 (드래그 직후에는 열지 않음)
+    let dragMoved = false;
+    card.addEventListener("click", () => {
+      if (dragMoved) return;
+      input.click();
     });
-  }
 
-  if (photoScale) {
-    photoScale.addEventListener("input", () => {
-      photoState.scalePct = Number(photoScale.value);
-      renderPhoto();
+    input.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) loadFile(file);
+      input.value = "";
     });
-  }
 
-  // Drag Events for Photos
+    // 마우스로 사진 위치 이동
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startOffsetX = 0;
+    let startOffsetY = 0;
 
-  let dragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let dragOffsetX0 = 0;
-  let dragOffsetY0 = 0;
-
-  photoImgs.forEach((img) => {
     img.addEventListener("mousedown", (e) => {
-      if (!photoState.naturalW) return;
+      if (!state.naturalW) return;
       dragging = true;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
-      dragOffsetX0 = photoState.offsetX;
-      dragOffsetY0 = photoState.offsetY;
-      photoImgs.forEach((el) => el.classList.add("is-dragging"));
+      dragMoved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      startOffsetX = state.offsetX;
+      startOffsetY = state.offsetY;
+      card.classList.add("is-dragging");
       e.preventDefault();
+      e.stopPropagation();
     });
-  });
 
-  window.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    photoState.offsetX = dragOffsetX0 + (e.clientX - dragStartX);
-    photoState.offsetY = dragOffsetY0 + (e.clientY - dragStartY);
-    renderPhoto();
-  });
-
-  window.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = false;
-    photoImgs.forEach((img) => img.classList.remove("is-dragging"));
-  });
-
-  // Filters & Noise Setup
-
-  initFilters();
-  initNoiseControl();
-
-  // Capture Button Handler
-
-  const captureBtn = document.getElementById("captureBtn");
-  if (captureBtn) {
-    captureBtn.addEventListener("click", async () => {
-      captureBtn.classList.add("is-busy");
-      try {
-        const dataUrl = await captureViewport();
-        const link = document.createElement("a");
-        link.download = buildCaptureFilename();
-        link.href = dataUrl;
-        link.click();
-      } catch (err) {
-        console.error("Capture failed:", err);
-        alert(
-          `이미지 저장에 실패했습니다: ${err?.message || "알 수 없는 오류"}\n콘솔 로그를 확인해주세요.`,
-        );
-      } finally {
-        captureBtn.classList.remove("is-busy");
-      }
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragMoved = true;
+      state.offsetX = startOffsetX + dx;
+      state.offsetY = startOffsetY + dy;
+      clampOffset();
+      render();
     });
-  }
 
-  // Initial Stage Fit
+    window.addEventListener("mouseup", () => {
+      if (!dragging) return;
+      dragging = false;
+      card.classList.remove("is-dragging");
+      // click 이벤트가 mouseup 직후 발생하므로 살짝 지연 후 플래그 해제
+      setTimeout(() => {
+        dragMoved = false;
+      }, 0);
+    });
 
-  fitStage();
-}
-
-// Run Application
-
-document.addEventListener("DOMContentLoaded", initEventListeners);
+    // 마우스 휠로 확대/축소 (선택 기능)
+    card.addEventListener(
+      "wheel",
+      (e) => {
+        if (!state.naturalW) return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 1.08 : 0.92;
+        state.scale = Math.min(4, Math.max(1, state.scale * delta));
+        clampOffset();
+        render();
+      },
+      { passive: false },
+    );
+  });
+});
