@@ -1,250 +1,137 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>필름 페어틀</title>
 
-    <link rel="stylesheet" href="./font.css" />
-    <link rel="stylesheet" href="./style.css" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>필름 페어틀</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
-  </head>
+  <link rel="stylesheet" href="./font.css" />
+  <link rel="stylesheet" href="./style.css" />
 
-  <body>
-    <!-- 사이드바 -->
-    <aside class="sidebar">
-      <div class="sidebar-actions">
-        <button class="captureBtn" id="captureBtn">📸 이미지로 저장</button>
-      </div>
-      <div class="sidebar-body">
-        <div class="sidebar-panels">
-          <h2>페어명</h2>
-          <input type="text" id="inputPair" value="페어명" />
-          <h2>기념일</h2>
-          <input
-            type="text"
-            id="inputAnniversary"
-            value="기념일 (최대 8글자)"
-            pattern="[0-9]*"
-            maxlength="8"
-          />
-          <h2>프레임 번호</h2>
-          <input
-            type="text"
-            id="inputCenter"
-            value="01"
-            inputmode="numeric"
-            pattern="[0-9]*"
-            maxlength="2"
-          />
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+</head>
 
-          <h2>사진</h2>
-          <input type="file" id="photoInput" accept="image/*" />
-          <label class="rangeRow">
-            <span>크기</span>
-            <input
-              type="range"
-              id="photoScale"
-              min="100"
-              max="300"
-              value="100"
-            />
-          </label>
-          <div class="field-static" id="photoHint">
-            사진을 추가하면 프레임에 표시됩니다. 클릭 후 드래그로 위치를
-            옮기거나 슬라이더로 크기 조절이 가능합니다.
-          </div>
+<body>
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-actions">
+      <button class="captureBtn" id="captureBtn">📸 이미지로 저장</button>
+    </div>
+    <div class="sidebar-body">
+      <div class="sidebar-panels">
+        <h2>페어명</h2>
+        <input type="text" id="inputPair" value="페어명" />
+        <h2>기념일</h2>
+        <input type="text" id="inputAnniversary" value="기념일 (최대 8글자)" pattern="[0-9]*" maxlength="8" />
+        <h2>프레임 번호</h2>
+        <input type="text" id="inputCenter" value="01" inputmode="numeric" pattern="[0-9]*" maxlength="2" />
 
-          <h2>필터(%)</h2>
-          <label class="rangeRow">
-            <span>밝기</span>
-            <input
-              type="range"
-              id="filterBrightness"
-              min="0"
-              max="300"
-              value="100"
-            />
-            <input
-              type="number"
-              class="rangeNum"
-              id="filterBrightnessNum"
-              min="0"
-              max="300"
-              value="100"
-            />
-          </label>
-          <label class="rangeRow">
-            <span>대비</span>
-            <input
-              type="range"
-              id="filterContrast"
-              min="0"
-              max="300"
-              value="110"
-            />
-            <input
-              type="number"
-              class="rangeNum"
-              id="filterContrastNum"
-              min="0"
-              max="300"
-              value="110"
-            />
-          </label>
-          <label class="rangeRow">
-            <span>채도</span>
-            <input
-              type="range"
-              id="filterSaturate"
-              min="0"
-              max="300"
-              value="120"
-            />
-            <input
-              type="number"
-              class="rangeNum"
-              id="filterSaturateNum"
-              min="0"
-              max="300"
-              value="120"
-            />
-          </label>
-          <label class="rangeRow">
-            <span>세피아</span>
-            <input type="range" id="filterSepia" min="0" max="100" value="10" />
-            <input
-              type="number"
-              class="rangeNum"
-              id="filterSepiaNum"
-              min="0"
-              max="100"
-              value="10"
-            />
-          </label>
-          <label class="rangeRow">
-            <span>노이즈</span>
-            <input
-              type="range"
-              id="noiseOpacity"
-              min="0"
-              max="100"
-              value="50"
-            />
-            <input
-              type="number"
-              class="rangeNum"
-              id="noiseOpacityNum"
-              min="0"
-              max="100"
-              value="50"
-            />
-          </label>
+        <h2>사진</h2>
+        <input type="file" id="photoInput" accept="image/*" />
+        <label class="rangeRow">
+          <span>크기</span>
+          <input type="range" id="photoScale" min="100" max="300" value="100" />
+        </label>
+        <div class="field-static" id="photoHint">
+          사진을 추가하면 프레임에 표시됩니다. 클릭 후 드래그로 위치를
+          옮기거나 슬라이더로 크기 조절이 가능합니다.
         </div>
+
+        <h2>필터(%)</h2>
+        <label class="rangeRow">
+          <span>밝기</span>
+          <input type="range" id="filterBrightness" min="0" max="300" value="100" />
+          <input type="number" class="rangeNum" id="filterBrightnessNum" min="0" max="300" value="100" />
+        </label>
+        <label class="rangeRow">
+          <span>대비</span>
+          <input type="range" id="filterContrast" min="0" max="300" value="110" />
+          <input type="number" class="rangeNum" id="filterContrastNum" min="0" max="300" value="110" />
+        </label>
+        <label class="rangeRow">
+          <span>채도</span>
+          <input type="range" id="filterSaturate" min="0" max="300" value="120" />
+          <input type="number" class="rangeNum" id="filterSaturateNum" min="0" max="300" value="120" />
+        </label>
+        <label class="rangeRow">
+          <span>세피아</span>
+          <input type="range" id="filterSepia" min="0" max="100" value="10" />
+          <input type="number" class="rangeNum" id="filterSepiaNum" min="0" max="100" value="10" />
+        </label>
+        <label class="rangeRow">
+          <span>노이즈</span>
+          <input type="range" id="noiseOpacity" min="0" max="100" value="50" />
+          <input type="number" class="rangeNum" id="noiseOpacityNum" min="0" max="100" value="50" />
+        </label>
       </div>
-    </aside>
+    </div>
+  </aside>
 
-    <main class="viewport">
-      <div
-        class="scale-wrapper"
-        id="scaleWrapper"
-        style="transform: scale(1); width: 1600px; height: 900px"
-      >
-        <div class="stage" id="captureArea">
-          <div class="sprockets top" id="spTop"></div>
-          <div class="sprockets bottom" id="spBottom">
-            <span style="left: -672px"></span>
-          </div>
+  <main class="viewport">
+    <div class="scale-wrapper" id="scaleWrapper" style="transform: scale(1); width: 1600px; height: 900px">
+      <div class="stage" id="captureArea">
+        <div class="sprockets top" id="spTop"></div>
+        <div class="sprockets bottom" id="spBottom">
+          <span style="left: -672px"></span>
+        </div>
 
-          <!-- 바코드 -->
-          <div class="film-barcodes" id="filmBarcodes">
-            <div class="barcode-mark" style="left: 136px; width: 388px">
-              <svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
-            </div>
-            <div class="barcode-mark" style="left: 608px; width: 392px">
-              <svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
-            </div>
-            <div
-              class="barcode-mark"
-              style="left: -320px; width: 308px; overflow: hidden"
-            >
-              <svg
-                style="left: 0px; width: 388px"
-                viewBox="0 0 1600 310"
-                preserveAspectRatio="none"
-              ></svg>
-            </div>
-            <div
-              class="barcode-mark"
-              style="left: 1148px; width: 132px; overflow: hidden"
-            >
-              <svg
-                style="left: 0px; width: 388px"
-                viewBox="0 0 1600 310"
-                preserveAspectRatio="none"
-              ></svg>
-            </div>
+        <!-- 바코드 -->
+        <div class="film-barcodes" id="filmBarcodes">
+          <div class="barcode-mark" style="left: 136px; width: 388px">
+            <svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
           </div>
+          <div class="barcode-mark" style="left: 608px; width: 392px">
+            <svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="barcode-mark" style="left: -320px; width: 308px; overflow: hidden">
+            <svg style="left: 0px; width: 388px" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="barcode-mark" style="left: 1148px; width: 132px; overflow: hidden">
+            <svg style="left: 0px; width: 388px" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
+          </div>
+        </div>
 
-          <!-- 입력창 -->
-          <div class="code code-top">
-            <span class="code-item-1" id="codeLeftText2">00A</span>
-            <span>Film</span>
-            <span id="pairText">Pair</span>
-            <span id="anniversaryText">Anniversary</span>
-            <span class="code-item-2" id="codeRightText2">01A</span>
-          </div>
-          <div class="code code-bottom">
-            <span class="code-item-1">
-              <span class="arrow-wide">
-                <svg viewBox="0 0 20 10" preserveAspectRatio="none">
-                  <polygon points="0,0 20,5 0,10"></polygon></svg></span
-              ><span id="codeLeftText">00</span>A</span
-            >
-            <span class="code-item-center" id="codeCenterText">01</span>
-            <span class="code-item-2"
-              ><span class="arrow-wide"
-                ><svg viewBox="0 0 20 10" preserveAspectRatio="none">
-                  <polygon points="0,0 20,5 0,10"></polygon></svg></span
-              ><span id="codeRightText">01</span>A</span
-            >
-          </div>
+        <!-- 입력창 -->
+        <div class="code code-top">
+          <span class="code-item-1" id="codeLeftText2">00A</span>
+          <span>Film</span>
+          <span id="pairText">Pair</span>
+          <span id="anniversaryText">Anniversary</span>
+          <span class="code-item-2" id="codeRightText2">01A</span>
+        </div>
+        <div class="code code-bottom">
+          <span class="code-item-1">
+            <span class="arrow-wide">
+              <svg viewBox="0 0 20 10" preserveAspectRatio="none">
+                <polygon points="0,0 20,5 0,10"></polygon>
+              </svg></span><span id="codeLeftText">00</span>A</span>
+          <span class="code-item-center" id="codeCenterText">01</span>
+          <span class="code-item-2"><span class="arrow-wide"><svg viewBox="0 0 20 10" preserveAspectRatio="none">
+                <polygon points="0,0 20,5 0,10"></polygon>
+              </svg></span><span id="codeRightText">01</span>A</span>
+        </div>
 
-          <!-- 프레임 -->
-          <div class="filmstrip">
-            <div class="frame frame-side frame-left">
-              <img
-                class="frame-photo"
-                id="photoLeft"
-                alt=""
-                draggable="false"
-              />
-              <div class="frame-noise"></div>
-            </div>
-            <div class="frame frame-main">
-              <img
-                class="frame-photo"
-                id="photoMain"
-                alt=""
-                draggable="false"
-              />
-              <div class="frame-noise"></div>
-            </div>
-            <div class="frame frame-side frame-right">
-              <img
-                class="frame-photo"
-                id="photoRight"
-                alt=""
-                draggable="false"
-              />
-              <div class="frame-noise"></div>
-            </div>
+        <!-- 프레임 -->
+        <div class="filmstrip">
+          <div class="frame frame-side frame-left">
+            <img class="frame-photo" id="photoLeft" alt="" draggable="false" />
+            <div class="frame-noise"></div>
+          </div>
+          <div class="frame frame-main">
+            <img class="frame-photo" id="photoMain" alt="" draggable="false" />
+            <div class="frame-noise"></div>
+          </div>
+          <div class="frame frame-side frame-right">
+            <img class="frame-photo" id="photoRight" alt="" draggable="false" />
+            <div class="frame-noise"></div>
           </div>
         </div>
       </div>
-    </main>
+    </div>
+  </main>
 
-    <script src="./script.js"></script>
-  </body>
+  <script src="./script.js"></script>
+</body>
+
 </html>

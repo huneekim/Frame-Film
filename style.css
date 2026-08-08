@@ -4,7 +4,7 @@
   --sub: #777;
   --realWhite: #fff;
   --realBlack: #000;
-  --sidebar-w: 320px;
+  --sidebar-w: 240px;
   --captureBg: #22151f;
   --film-out: #839bc3;
 }
@@ -68,7 +68,7 @@ body {
 }
 
 .sidebar h2 {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--sub);
   margin: 24px 0 12px;
   letter-spacing: 0.05em;
@@ -84,7 +84,7 @@ body {
   border: 1px solid #ddd;
   border-radius: 6px;
   background: none;
-  font-size: 14px;
+  font-size: 13.5px;
   padding: 8px 10px;
   outline: none;
   transition:
@@ -103,7 +103,7 @@ body {
   border: 1px solid rgba(16, 16, 16, 0.1);
   border-radius: 10px;
   color: rgba(16, 16, 16, 0.6);
-  font-size: 14px;
+  font-size: 13px;
   padding: 9px 10px;
   box-sizing: border-box;
 }
@@ -115,11 +115,12 @@ body {
   gap: 6px;
   width: 100%;
   padding: 10px 12px;
+  margin-bottom: 8px;
   border-radius: 8px;
   border: 1px solid var(--ink);
   background: var(--ink);
   color: var(--realWhite);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -179,11 +180,11 @@ body {
 }
 
 .sprockets.top {
-  top: 36px;
+  top: 52px;
 }
 
 .sprockets.bottom {
-  top: 800px;
+  top: 816px;
 }
 
 .sprockets span {
@@ -193,7 +194,7 @@ body {
   width: 48px;
   height: 64px;
   border-radius: 8px;
-  background: var(--realWhite);
+  background: var(--realBlack);
 }
 
 .code,
@@ -205,7 +206,7 @@ body {
 }
 
 .code {
-  font-family: "PyeojinGothic", "Pretendard", "Noto Sans KR", sans-serif;
+  font-family: "Pretendard", sans-serif;
   font-weight: 800;
   position: absolute;
   left: 320px;
@@ -220,13 +221,13 @@ body {
 }
 
 .code-top {
-  top: 4px;
+  top: 24px;
   justify-content: center;
   gap: 16px;
 }
 
 .code-bottom {
-  top: 844px;
+  top: 876px;
 }
 
 .code-top .code-item-1,
@@ -262,7 +263,7 @@ body {
   position: absolute;
   left: 320px;
   right: 0;
-  top: 844px;
+  top: 876px;
   height: 56px;
   pointer-events: none;
 }
@@ -359,7 +360,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  margin-top: 10px;
+  font-size: 13px;
   color: var(--sub);
 }
 
