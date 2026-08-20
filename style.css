@@ -26,7 +26,11 @@
   font-display: swap;
 }
 
+/* Base Styles & Reset */
+
 :root {
+  --sidebar-w: 320px;
+
   --bg: #fafafa;
   --line: #ddd;
   --ink: #222;
@@ -34,14 +38,13 @@
   --sub: #777;
   --red: #d9534f;
 
-  --sidebar-w: 320px;
-
   --captureBg: #22151f;
   --filmOut: #839bc3;
   --shadow: #653000;
 }
 
 /* Reset & Global */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -67,7 +70,15 @@ body {
   background: white;
 }
 
+button {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* Sidebar Layout */
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -87,17 +98,51 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.sidebar__body,
-.sidebar__panels {
+.sidebar__body {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-}
 
-.sidebar__body {
   display: flex;
   align-items: stretch;
   overflow: hidden;
+}
+
+.sidebar__tabs {
+  flex: 0 0 auto;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgb(238, 238, 238);
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.tabBtn {
+  border: none;
+  background: none;
+  padding: 16px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sub);
+  cursor: pointer;
+  text-align: center;
+  writing-mode: horizontal-tb;
+  border-left: 3px solid transparent;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.tabBtn:hover {
+  background: rgb(238, 238, 238);
+  color: var(--ink);
+}
+
+.tabBtn.active {
+  background: white;
+  color: var(--ink);
+  border-left-color: var(--ink);
 }
 
 .sidebar__panels {
@@ -105,24 +150,24 @@ body {
   overflow-y: auto;
 }
 
-.sidebar__group {
-  margin-bottom: 24px;
+.sidebar__panels .tab-panel {
+  display: none;
 }
 
-.sidebar__group:first-of-type {
-  margin-top: 0;
+.sidebar__panels .tab-panel.active {
+  display: block;
 }
 
-.sidebar__label {
+.sidebar h2 {
   display: block;
   margin: 24px 0 12px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--sub);
 }
 
-.sidebar__group:first-of-type .sidebar__label:first-child {
+.sidebar h2:first-of-type {
   margin-top: 0;
 }
 
@@ -130,7 +175,7 @@ body {
   width: 100%;
   height: 36px;
   padding: 8px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 14px;
   outline: none;
@@ -146,11 +191,10 @@ body {
 }
 
 .sidebar__hint {
-  width: 100%;
-  padding: 10px;
+  padding: 6px 10px;
   margin-top: 10px;
   border: 1px solid rgba(var(--ink2), 0.2);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 12px;
   color: rgba(var(--ink2), 0.8);
   background: var(--bg);
@@ -194,6 +238,7 @@ body {
   margin-top: 10px;
   font-size: 12px;
   color: var(--sub);
+  white-space: nowrap;
 }
 
 .sidebar__range {
@@ -221,6 +266,7 @@ body {
 }
 
 /* Viewport & Film Stage */
+
 .viewport {
   position: relative;
   display: flex;
@@ -250,6 +296,7 @@ body {
 }
 
 /* Sprockets & Barcodes */
+
 .sprockets {
   position: absolute;
   left: 0;
@@ -305,6 +352,7 @@ body {
 }
 
 /* Film Code Typography */
+
 .film-code {
   position: absolute;
   display: flex;
@@ -371,6 +419,7 @@ body {
 }
 
 /* Filmstrip & Frames */
+
 .filmstrip {
   display: flex;
   gap: 48px;
@@ -422,4 +471,73 @@ body {
   opacity: var(--noise-opacity);
   mix-blend-mode: overlay;
   pointer-events: none;
+}
+
+/* reset */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 3;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-box {
+  background: white;
+  border-radius: 14px;
+  padding: 26px 24px;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.modal-desc {
+  font-size: 12px;
+  color: var(--sub);
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.modalBtn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.modalBtn.cancel:hover {
+  background: #f2f2f2;
+}
+
+.modalBtn.confirm {
+  border-color: var(--red);
+  background: var(--red);
+  color: white;
+}
+
+.modalBtn.confirm:hover {
+  opacity: 0.88;
 }

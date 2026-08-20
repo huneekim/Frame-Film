@@ -606,3 +606,21 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// 9. sidebar tab navigation
+function switchTab(tabName) {
+  document.querySelectorAll(".tabBtn").forEach((btn) => {
+    btn.classList.toggle(
+      "active",
+      btn.dataset.tab === tabName,
+    );
+  });
+  document
+    .querySelectorAll(".tab-panel")
+    .forEach((panel) => {
+      panel.classList.toggle(
+        "active",
+        panel.id === `panel-${tabName}`,
+      );
+    });
+}

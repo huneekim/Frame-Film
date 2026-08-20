@@ -13,40 +13,47 @@
 </head>
 
 <body>
-	<!-- 사이드바 컨트롤러 -->
+	<!-- Sidebar -->
 	<aside class="sidebar">
 		<header class="sidebar__header">
 			<button type="button" class="btn btn--primary" id="saveBtn">
-				💾 현재 상태 저장
+				현재 상태 저장
 			</button>
 			<button type="button" class="btn btn--primary" id="captureBtn">
-				📸 이미지로 저장
+				이미지로 저장
 			</button>
 
 			<button type="button" class="btn btn--danger" id="resetBtn">
-				🗑️ 초기화
+				초기화
 			</button>
 		</header>
 
 		<div class="sidebar__body">
-			<form class="sidebar__panels" onsubmit="return false;">
-				<!-- 기본 정보 설정 -->
-				<section class="sidebar__group">
-					<label class="sidebar__label" for="inputPair">페어명</label>
+			<nav class="sidebar__tabs">
+				<button class="tabBtn active" data-tab="text" onclick="switchTab('text')">
+					글자
+				</button>
+				<button class="tabBtn" data-tab="photo" onclick="switchTab('photo')">
+					사진
+				</button>
+			</nav>
+
+			<div class="sidebar__panels">
+				<section class="tab-panel active" id="panel-text">
+					<h2 class="sidebar__label" for="inputPair">페어명</h2>
 					<input class="sidebar__input" type="text" id="inputPair" value="페어명" />
 
-					<label class="sidebar__label" for="inputAnniversary">기념일</label>
+					<h2 class="sidebar__label" for="inputAnniversary">기념일</h2>
 					<input class="sidebar__input" type="text" id="inputAnniversary" value="기념일 (최대 8글자)" pattern="[0-9]*"
 						maxlength="8" />
 
-					<label class="sidebar__label" for="inputCenter">프레임 번호</label>
+					<h2 class="sidebar__label" for="inputCenter">프레임 번호</h2>
 					<input class="sidebar__input" type="text" id="inputCenter" value="01" inputmode="numeric" pattern="[0-9]*"
 						maxlength="2" />
 				</section>
 
-				<!-- 사진 업로드 및 조절 -->
-				<section class="sidebar__group">
-					<label class="sidebar__label" for="photoInput">사진</label>
+				<section class="tab-panel" id="panel-photo">
+					<h2 class="sidebar__label" for="photoInput">사진</h2>
 					<input class="sidebar__input sidebar__input--file" type="file" id="photoInput" accept="image/*" />
 
 					<div class="sidebar__range-row">
@@ -55,28 +62,26 @@
 					</div>
 
 					<p class="sidebar__hint" id="photoHint">
-						사진을 추가하면 프레임에 표시됩니다. 클릭 후 드래그로 위치를 옮기거나 슬라이더로 크기 조절이 가능합니다.
+						클릭 후 드래그: 위치 옮기기 <br />
+						마우스 스크롤: 크기 조절
 					</p>
-				</section>
 
-				<!-- 필터 설정 -->
-				<section class="sidebar__group">
 					<h2 class="sidebar__label">필터(%)</h2>
 
 					<div class="sidebar__range-row">
-						<label class="sidebar__range-label" for="filterBrightness">밝기</label>
+						<label class="sidebar__range-label" for="filterBrightness">밝기　</label>
 						<input class="sidebar__range" type="range" id="filterBrightness" min="0" max="300" value="100" />
 						<input class="sidebar__number" type="number" id="filterBrightnessNum" min="0" max="300" value="100" />
 					</div>
 
 					<div class="sidebar__range-row">
-						<label class="sidebar__range-label" for="filterContrast">대비</label>
+						<label class="sidebar__range-label" for="filterContrast">대비　</label>
 						<input class="sidebar__range" type="range" id="filterContrast" min="0" max="300" value="110" />
 						<input class="sidebar__number" type="number" id="filterContrastNum" min="0" max="300" value="110" />
 					</div>
 
 					<div class="sidebar__range-row">
-						<label class="sidebar__range-label" for="filterSaturate">채도</label>
+						<label class="sidebar__range-label" for="filterSaturate">채도　</label>
 						<input class="sidebar__range" type="range" id="filterSaturate" min="0" max="300" value="120" />
 						<input class="sidebar__number" type="number" id="filterSaturateNum" min="0" max="300" value="120" />
 					</div>
@@ -93,37 +98,49 @@
 						<input class="sidebar__number" type="number" id="noiseOpacityNum" min="0" max="100" value="50" />
 					</div>
 				</section>
-			</form>
+			</div>
 		</div>
 	</aside>
 
-	<!-- 메인 뷰포트 -->
+	<!-- main -->
 	<main class="viewport">
-		<div class="viewport__scale-wrapper" id="scaleWrapper" style="transform: scale(1); width: 1600px; height: 900px;">
+		<div class="viewport__scale-wrapper" id="scaleWrapper" style="
+          transform: scale(1);
+          width: 100rem;
+          height: 56.25rem;
+        ">
 			<div class="film-stage" id="captureArea">
-				<!-- 필름 구멍 -->
+				<!-- film sprockets -->
 				<div class="sprockets sprockets--top" id="spTop"></div>
 				<div class="sprockets sprockets--bottom" id="spBottom">
-					<span style="left: -672px"></span>
+					<span style="left: -42rem"></span>
 				</div>
 
-				<!-- 바코드 -->
+				<!-- barcode -->
 				<div class="film-barcodes" id="filmBarcodes">
-					<div class="barcode-mark" style="left: 136px; width: 388px">
+					<div class="barcode-mark" style="left: 8.5rem; width: 24.25rem">
 						<svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
 					</div>
-					<div class="barcode-mark" style="left: 608px; width: 392px">
+					<div class="barcode-mark" style="left: 38rem; width: 24.5rem">
 						<svg viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
 					</div>
-					<div class="barcode-mark" style="left: -320px; width: 308px; overflow: hidden;">
-						<svg style="left: 0px; width: 388px" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
+					<div class="barcode-mark" style="
+                left: -20rem;
+                width: 19.25rem;
+                overflow: hidden;
+              ">
+						<svg style="left: 0rem; width: 24.25rem" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
 					</div>
-					<div class="barcode-mark" style="left: 1148px; width: 132px; overflow: hidden;">
-						<svg style="left: 0px; width: 388px" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
+					<div class="barcode-mark" style="
+                left: 71.75rem;
+                width: 8.25rem;
+                overflow: hidden;
+              ">
+						<svg style="left: 0rem; width: 24.25rem" viewBox="0 0 1600 310" preserveAspectRatio="none"></svg>
 					</div>
 				</div>
 
-				<!-- 상/하단 텍스트 코딩 -->
+				<!-- barcode text -->
 				<div class="film-code film-code--top">
 					<span class="film-code__item-1" id="codeLeftText2">00A</span>
 					<span>Film</span>
@@ -152,7 +169,7 @@
 					</span>
 				</div>
 
-				<!-- 필름 프레임 -->
+				<!-- film frame -->
 				<div class="filmstrip">
 					<div class="film-frame film-frame--side film-frame--left">
 						<img class="film-frame__photo" id="photoLeft" alt="" draggable="false" />
@@ -170,6 +187,25 @@
 			</div>
 		</div>
 	</main>
+
+	<!-- reset -->
+	<div class="modal-overlay" id="resetModalOverlay">
+		<div class="modal-box">
+			<p class="modal-title">정말 초기화하시겠습니까?</p>
+			<p class="modal-desc">
+				이미지, 색상, 내용 등 모든 설정이 처음 상태로
+				되돌아가며 되돌릴 수 없습니다.
+			</p>
+			<div class="modal-actions">
+				<button class="modalBtn cancel" onclick="cancelReset()">
+					아니오
+				</button>
+				<button class="modalBtn confirm" onclick="confirmReset()">
+					예
+				</button>
+			</div>
+		</div>
+	</div>
 
 	<script src="./script.js"></script>
 </body>
