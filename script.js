@@ -1,6 +1,3 @@
-// HUNEE Pair Frame - Main Script
-
-
 // 1. Constants & State Management
 
 const FRAME_CONFIG = {
@@ -74,7 +71,6 @@ const DOM = {
     "noiseOpacityNum",
   ),
 };
-
 
 // 2. Film UI Rendering (Sprockets & Barcodes)
 
@@ -198,7 +194,6 @@ function renderBarcodes(containerId) {
   container.innerHTML = html;
 }
 
-
 // 3. Text & Frame Number Binding
 
 function bindInputToText(inputEl, targetEl) {
@@ -256,7 +251,6 @@ function initTextBindings() {
   updateFrameNumbers();
 }
 
-
 // 4. Viewport Auto Fit
 
 function fitStageToViewport() {
@@ -272,7 +266,6 @@ function fitStageToViewport() {
   DOM.scaleWrapper.style.width = `${FRAME_CONFIG.STAGE_W * scale}px`;
   DOM.scaleWrapper.style.height = `${FRAME_CONFIG.STAGE_H * scale}px`;
 }
-
 
 // 5. Photo Operations (Upload, Render, Drag & Scale)
 
@@ -399,7 +392,6 @@ function initPhotoControls() {
   window.addEventListener("mouseup", onPointerUp);
 }
 
-
 // 6. Filter Controls
 
 function updatePhotoFilter() {
@@ -461,7 +453,6 @@ function initFilterControls() {
   updatePhotoFilter();
   updateNoiseOpacity();
 }
-
 
 // 7. Image Capture & Export Engine
 
@@ -594,7 +585,6 @@ function initCaptureBtn() {
     }
   });
 }
-
 
 // 8. Initialization
 

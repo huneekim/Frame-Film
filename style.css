@@ -131,7 +131,7 @@ body {
   padding: 8px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 13.5px;
+  font-size: 13.5008px;
   outline: none;
   background: none;
   transition:
@@ -148,7 +148,7 @@ body {
   width: 100%;
   padding: 10px;
   margin-top: 10px;
-  border: 1px solid rgba(var(--ink2), 0.1);
+  border: 1px solid rgba(var(--ink2), 0.2);
   border-radius: 10px;
   font-size: 13px;
   color: rgba(var(--ink2), 0.8);
@@ -200,12 +200,23 @@ body {
 }
 
 .sidebar__number {
-  flex: none;
-  width: 48px;
-  height: 24px;
-  padding: 2px 4px;
   font-size: 12px;
   text-align: center;
+  width: 36px;
+  height: 24px;
+  padding: 2px 4px;
+  border: 1px solid rgba(var(--ink2), 0.2);
+  border-radius: 4px;
+}
+
+.sidebar__number::-webkit-outer-spin-button,
+.sidebar__number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sidebar__number[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* Viewport & Film Stage */
