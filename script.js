@@ -1,7 +1,87 @@
-// 필름 구멍 생성
+// HUNEE Pair Frame - Main Script
 
-function fillSprockets(id) {
-  const el = document.getElementById(id);
+
+// 1. Constants & State Management
+
+const FRAME_CONFIG = {
+  WIDTH: 960,
+  HEIGHT: 672,
+  STAGE_W: 1600,
+  STAGE_H: 900,
+  PADDING: 48,
+};
+
+const photoState = {
+  naturalW: 0,
+  naturalH: 0,
+  baseScale: 1,
+  offsetX: 0,
+  offsetY: 0,
+  scalePct: 100,
+};
+
+const dragState = {
+  active: false,
+  startX: 0,
+  startY: 0,
+  offsetX0: 0,
+  offsetY0: 0,
+};
+
+// Cached DOM Elements
+const DOM = {
+  scaleWrapper: document.getElementById("scaleWrapper"),
+  viewport: document.querySelector(".viewport"),
+  captureArea: document.getElementById("captureArea"),
+  captureBtn: document.getElementById("captureBtn"),
+  inputPair: document.getElementById("inputPair"),
+  inputAnniversary: document.getElementById(
+    "inputAnniversary",
+  ),
+  inputCenter: document.getElementById("inputCenter"),
+  pairText: document.getElementById("pairText"),
+  anniversaryText: document.getElementById(
+    "anniversaryText",
+  ),
+  codeCenterText: document.getElementById("codeCenterText"),
+  codeLeftText: document.getElementById("codeLeftText"),
+  codeRightText: document.getElementById("codeRightText"),
+  codeLeftText2: document.getElementById("codeLeftText2"),
+  codeRightText2: document.getElementById("codeRightText2"),
+  photoInput: document.getElementById("photoInput"),
+  photoScale: document.getElementById("photoScale"),
+  photoImgs: [
+    document.getElementById("photoMain"),
+    document.getElementById("photoLeft"),
+    document.getElementById("photoRight"),
+  ],
+  filterInputs: {
+    brightness: document.getElementById("filterBrightness"),
+    contrast: document.getElementById("filterContrast"),
+    saturate: document.getElementById("filterSaturate"),
+    sepia: document.getElementById("filterSepia"),
+  },
+  filterNumInputs: {
+    brightness: document.getElementById(
+      "filterBrightnessNum",
+    ),
+    contrast: document.getElementById("filterContrastNum"),
+    saturate: document.getElementById("filterSaturateNum"),
+    sepia: document.getElementById("filterSepiaNum"),
+  },
+  noiseOpacity: document.getElementById("noiseOpacity"),
+  noiseOpacityNum: document.getElementById(
+    "noiseOpacityNum",
+  ),
+};
+
+
+// 2. Film UI Rendering (Sprockets & Barcodes)
+
+function renderSprockets(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
   const holeW = 48;
   const frameWidth = 960;
   const inset = 16;
@@ -9,35 +89,39 @@ function fillSprockets(id) {
   const frameLefts = [-692, 320, 1332];
   const usableSpan = frameWidth - inset * 2;
   const step = (usableSpan - holeW) / (holesPerFrame - 1);
-  let html = "";
-  frameLefts.forEach((frameLeft) => {
-    for (let i = 0; i < holesPerFrame; i++) {
-      const left = frameLeft + inset + i * step;
-      html += `<span style="left:${left}px"></span>`;
-    }
-  });
-  el.innerHTML = html;
+
+  const html = frameLefts
+    .flatMap((frameLeft) =>
+      Array.from({ length: holesPerFrame }, (_, i) => {
+        const left = frameLeft + inset + i * step;
+        return `<span style="left:${left}px"></span>`;
+      }),
+    )
+    .join("");
+
+  container.innerHTML = html;
 }
-fillSprockets("spTop");
-fillSprockets("spBottom");
 
-// 필름 바코드 생성
-
-function fillBarcodes(id) {
-  const el = document.getElementById(id);
+function renderBarcodes(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
   const anchorLeft = 62;
   const anchorCenter = 566;
   const anchorRight = 1074;
-
   const halfWidthWide = 62;
   const halfWidthNarrow = 30;
-
   const gap = 12;
 
   const midSegments = [
-    [anchorLeft + halfWidthWide + gap, anchorCenter - halfWidthNarrow - gap],
-    [anchorCenter + halfWidthNarrow + gap, anchorRight - halfWidthWide - gap],
+    [
+      anchorLeft + halfWidthWide + gap,
+      anchorCenter - halfWidthNarrow - gap,
+    ],
+    [
+      anchorCenter + halfWidthNarrow + gap,
+      anchorRight - halfWidthWide - gap,
+    ],
   ];
 
   const tileWidth = midSegments[0][1] - midSegments[0][0];
@@ -73,11 +157,13 @@ function fillBarcodes(id) {
     [1497, 0, 52, 155],
     [1548, 0, 52, 310],
   ];
-  const srcW = 1600,
-    srcH = 310;
+
+  const srcW = 1600;
+  const srcH = 310;
   const bars = barRects
     .map(
-      ([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" />`,
+      ([x, y, w, h]) =>
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}" />`,
     )
     .join("");
 
@@ -85,22 +171,21 @@ function fillBarcodes(id) {
 
   midSegments.forEach(([left, right]) => {
     const width = right - left;
-    if (width <= 0) return;
-    html +=
-      `<div class="barcode-mark" style="left:${left}px;width:${width}px">` +
-      `<svg viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg></div>`;
+    if (width > 0) {
+      html += `<div class="barcode-mark" style="left:${left}px;width:${width}px"><svg viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg></div>`;
+    }
   });
 
   margins.forEach(([left, right], idx) => {
     const marginWidth = right - left;
     if (marginWidth <= 0) return;
+
     html += `<div class="barcode-mark" style="left:${left}px;width:${marginWidth}px;overflow:hidden;">`;
     if (idx === 0) {
       const tileCount = Math.ceil(marginWidth / tileWidth);
       const startX = marginWidth - tileCount * tileWidth;
       for (let i = 0; i < tileCount; i++) {
-        const x = startX + i * tileWidth;
-        html += `<svg style="left:${x}px;width:${tileWidth}px" viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg>`;
+        html += `<svg style="left:${startX + i * tileWidth}px;width:${tileWidth}px" viewBox="0 0 ${srcW} ${srcH}" preserveAspectRatio="none">${bars}</svg>`;
       }
     } else {
       for (let x = 0; x < marginWidth; x += tileWidth) {
@@ -109,101 +194,105 @@ function fillBarcodes(id) {
     }
     html += `</div>`;
   });
-  el.innerHTML = html;
+
+  container.innerHTML = html;
 }
-fillBarcodes("filmBarcodes");
 
-// 입력창
 
-function bindEditable(inputId, targetId) {
-  const input = document.getElementById(inputId);
-  const target = document.getElementById(targetId);
-  input.addEventListener("input", () => {
-    target.textContent = input.value;
+// 3. Text & Frame Number Binding
+
+function bindInputToText(inputEl, targetEl) {
+  inputEl.addEventListener("input", () => {
+    targetEl.textContent = inputEl.value;
   });
 }
-bindEditable("inputPair", "pairText");
-bindEditable("inputAnniversary", "anniversaryText");
 
-const inputCenter = document.getElementById("inputCenter");
-const codeCenterText = document.getElementById("codeCenterText");
-const codeLeftText = document.getElementById("codeLeftText");
-const codeRightText = document.getElementById("codeRightText");
-const codeLeftText2 = document.getElementById("codeLeftText2");
-const codeRightText2 = document.getElementById("codeRightText2");
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
+function padZero(num) {
+  return String(num).padStart(2, "0");
 }
 
 function updateFrameNumbers() {
-  const digits = inputCenter.value.replace(/[^0-9]/g, "");
+  const digits = DOM.inputCenter.value.replace(
+    /[^0-9]/g,
+    "",
+  );
   const mm = digits === "" ? 0 : parseInt(digits, 10);
-  codeCenterText.textContent = digits === "" ? "" : digits;
+
+  DOM.codeCenterText.textContent =
+    digits === "" ? "" : digits;
+
   const nnLeft = mm - 1 < 0 ? 0 : mm;
   const nnRight = mm + 1;
-  codeLeftText.textContent = digits === "" ? "" : pad2(nnLeft);
-  codeRightText.textContent = digits === "" ? "" : pad2(nnRight);
-  codeLeftText2.textContent = digits === "" ? "" : `${pad2(nnLeft)}A`;
-  codeRightText2.textContent = digits === "" ? "" : `${pad2(nnRight)}A`;
+
+  DOM.codeLeftText.textContent =
+    digits === "" ? "" : padZero(nnLeft);
+  DOM.codeRightText.textContent =
+    digits === "" ? "" : padZero(nnRight);
+  DOM.codeLeftText2.textContent =
+    digits === "" ? "" : `${padZero(nnLeft)}A`;
+  DOM.codeRightText2.textContent =
+    digits === "" ? "" : `${padZero(nnRight)}A`;
 }
 
-inputCenter.addEventListener("input", () => {
-  const digits = inputCenter.value.replace(/[^0-9]/g, "");
-  if (digits !== inputCenter.value) inputCenter.value = digits;
-  updateFrameNumbers();
-  fillBarcodes("filmBarcodes");
-});
-updateFrameNumbers();
+function initTextBindings() {
+  bindInputToText(DOM.inputPair, DOM.pairText);
+  bindInputToText(
+    DOM.inputAnniversary,
+    DOM.anniversaryText,
+  );
 
-function fitStage() {
-  const wrapper = document.getElementById("scaleWrapper");
-  const vp = document.querySelector(".viewport");
-  const pad = 48;
+  DOM.inputCenter.addEventListener("input", () => {
+    const digits = DOM.inputCenter.value.replace(
+      /[^0-9]/g,
+      "",
+    );
+    if (digits !== DOM.inputCenter.value) {
+      DOM.inputCenter.value = digits;
+    }
+    updateFrameNumbers();
+    renderBarcodes("filmBarcodes");
+  });
+
+  updateFrameNumbers();
+}
+
+
+// 4. Viewport Auto Fit
+
+function fitStageToViewport() {
   const scale = Math.min(
-    (vp.clientWidth - pad) / 1600,
-    (vp.clientHeight - pad) / 900,
+    (DOM.viewport.clientWidth - FRAME_CONFIG.PADDING) /
+      FRAME_CONFIG.STAGE_W,
+    (DOM.viewport.clientHeight - FRAME_CONFIG.PADDING) /
+      FRAME_CONFIG.STAGE_H,
     1,
   );
-  wrapper.style.transform = `scale(${scale})`;
-  wrapper.style.width = `${1600 * scale}px`;
-  wrapper.style.height = `${900 * scale}px`;
+
+  DOM.scaleWrapper.style.transform = `scale(${scale})`;
+  DOM.scaleWrapper.style.width = `${FRAME_CONFIG.STAGE_W * scale}px`;
+  DOM.scaleWrapper.style.height = `${FRAME_CONFIG.STAGE_H * scale}px`;
 }
-fitStage();
-window.addEventListener("resize", () => {
-  fitStage();
-  fillBarcodes("filmBarcodes");
-});
 
-// 사진 삽입 · 드래그 이동 · 크기 조절
 
-const FRAME_W = 960,
-  FRAME_H = 672;
-const photoImgs = [
-  document.getElementById("photoMain"),
-  document.getElementById("photoLeft"),
-  document.getElementById("photoRight"),
-];
-const photoInput = document.getElementById("photoInput");
-const photoScale = document.getElementById("photoScale");
+// 5. Photo Operations (Upload, Render, Drag & Scale)
 
-const photoState = {
-  naturalW: 0,
-  naturalH: 0,
-  baseScale: 1,
-  offsetX: 0,
-  offsetY: 0,
-  scalePct: 100,
-};
-
-function renderPhoto() {
+function renderPhotoTransform() {
   if (!photoState.naturalW) return;
-  const scale = photoState.baseScale * (photoState.scalePct / 100);
-  const w = photoState.naturalW * scale;
-  const h = photoState.naturalH * scale;
 
-  const maxOffsetX = Math.max(0, (w - FRAME_W) / 2);
-  const maxOffsetY = Math.max(0, (h - FRAME_H) / 2);
+  const scale =
+    photoState.baseScale * (photoState.scalePct / 100);
+  const width = photoState.naturalW * scale;
+  const height = photoState.naturalH * scale;
+
+  const maxOffsetX = Math.max(
+    0,
+    (width - FRAME_CONFIG.WIDTH) / 2,
+  );
+  const maxOffsetY = Math.max(
+    0,
+    (height - FRAME_CONFIG.HEIGHT) / 2,
+  );
+
   photoState.offsetX = Math.min(
     maxOffsetX,
     Math.max(-maxOffsetX, photoState.offsetX),
@@ -213,184 +302,203 @@ function renderPhoto() {
     Math.max(-maxOffsetY, photoState.offsetY),
   );
 
-  const left = FRAME_W / 2 - w / 2 + photoState.offsetX;
-  const top = FRAME_H / 2 - h / 2 + photoState.offsetY;
+  const left =
+    FRAME_CONFIG.WIDTH / 2 - width / 2 + photoState.offsetX;
+  const top =
+    FRAME_CONFIG.HEIGHT / 2 -
+    height / 2 +
+    photoState.offsetY;
 
-  photoImgs.forEach((img) => {
-    img.style.width = `${w}px`;
-    img.style.height = `${h}px`;
+  DOM.photoImgs.forEach((img) => {
+    img.style.width = `${width}px`;
+    img.style.height = `${height}px`;
     img.style.left = `${left}px`;
     img.style.top = `${top}px`;
   });
 }
 
-photoInput.addEventListener("change", () => {
-  const file = photoInput.files && photoInput.files[0];
+function handlePhotoUpload(e) {
+  const file = e.target.files && e.target.files[0];
   if (!file) return;
-  const url = URL.createObjectURL(file);
+
+  const objectUrl = URL.createObjectURL(file);
   const probe = new Image();
+
   probe.onload = () => {
     photoState.naturalW = probe.naturalWidth;
     photoState.naturalH = probe.naturalHeight;
     photoState.baseScale = Math.max(
-      FRAME_W / probe.naturalWidth,
-      FRAME_H / probe.naturalHeight,
+      FRAME_CONFIG.WIDTH / probe.naturalWidth,
+      FRAME_CONFIG.HEIGHT / probe.naturalHeight,
     );
     photoState.offsetX = 0;
     photoState.offsetY = 0;
     photoState.scalePct = 100;
-    photoScale.value = 100;
-    photoImgs.forEach((img) => {
-      img.src = url;
+    DOM.photoScale.value = 100;
+
+    DOM.photoImgs.forEach((img) => {
+      img.src = objectUrl;
       img.classList.add("is-active");
     });
-    renderPhoto();
+
+    renderPhotoTransform();
   };
-  probe.src = url;
-});
 
-photoScale.addEventListener("input", () => {
-  photoState.scalePct = Number(photoScale.value);
-  renderPhoto();
-});
+  probe.src = objectUrl;
+}
 
-let dragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let dragOffsetX0 = 0;
-let dragOffsetY0 = 0;
-
-function onPhotoPointerDown(e) {
+function onPointerDown(e) {
   if (!photoState.naturalW) return;
-  dragging = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  dragOffsetX0 = photoState.offsetX;
-  dragOffsetY0 = photoState.offsetY;
-  photoImgs.forEach((img) => img.classList.add("is-dragging"));
+
+  dragState.active = true;
+  dragState.startX = e.clientX;
+  dragState.startY = e.clientY;
+  dragState.offsetX0 = photoState.offsetX;
+  dragState.offsetY0 = photoState.offsetY;
+
+  DOM.photoImgs.forEach((img) =>
+    img.classList.add("is-dragging"),
+  );
   e.preventDefault();
 }
 
-function onPhotoPointerMove(e) {
-  if (!dragging) return;
-  photoState.offsetX = dragOffsetX0 + (e.clientX - dragStartX);
-  photoState.offsetY = dragOffsetY0 + (e.clientY - dragStartY);
-  renderPhoto();
+function onPointerMove(e) {
+  if (!dragState.active) return;
+
+  photoState.offsetX =
+    dragState.offsetX0 + (e.clientX - dragState.startX);
+  photoState.offsetY =
+    dragState.offsetY0 + (e.clientY - dragState.startY);
+
+  renderPhotoTransform();
 }
 
-function onPhotoPointerUp() {
-  if (!dragging) return;
-  dragging = false;
-  photoImgs.forEach((img) => img.classList.remove("is-dragging"));
+function onPointerUp() {
+  if (!dragState.active) return;
+
+  dragState.active = false;
+  DOM.photoImgs.forEach((img) =>
+    img.classList.remove("is-dragging"),
+  );
 }
 
-photoImgs.forEach((img) =>
-  img.addEventListener("mousedown", onPhotoPointerDown),
-);
-window.addEventListener("mousemove", onPhotoPointerMove);
-window.addEventListener("mouseup", onPhotoPointerUp);
+function initPhotoControls() {
+  DOM.photoInput.addEventListener(
+    "change",
+    handlePhotoUpload,
+  );
+  DOM.photoScale.addEventListener("input", () => {
+    photoState.scalePct = Number(DOM.photoScale.value);
+    renderPhotoTransform();
+  });
 
-// 필터 - 밝기 · 대비 · 채도 · 세피아
+  DOM.photoImgs.forEach((img) =>
+    img.addEventListener("mousedown", onPointerDown),
+  );
+  window.addEventListener("mousemove", onPointerMove);
+  window.addEventListener("mouseup", onPointerUp);
+}
 
-const filterInputs = {
-  brightness: document.getElementById("filterBrightness"),
-  contrast: document.getElementById("filterContrast"),
-  saturate: document.getElementById("filterSaturate"),
-  sepia: document.getElementById("filterSepia"),
-};
-const filterNumInputs = {
-  brightness: document.getElementById("filterBrightnessNum"),
-  contrast: document.getElementById("filterContrastNum"),
-  saturate: document.getElementById("filterSaturateNum"),
-  sepia: document.getElementById("filterSepiaNum"),
-};
+
+// 6. Filter Controls
 
 function updatePhotoFilter() {
-  const b = filterInputs.brightness.value;
-  const c = filterInputs.contrast.value;
-  const s = filterInputs.saturate.value;
-  const se = filterInputs.sepia.value;
-  const value = `brightness(${b}%) contrast(${c}%) saturate(${s}%) sepia(${se}%)`;
-  document.documentElement.style.setProperty("--photo-filter", value);
+  const b = DOM.filterInputs.brightness.value;
+  const c = DOM.filterInputs.contrast.value;
+  const s = DOM.filterInputs.saturate.value;
+  const se = DOM.filterInputs.sepia.value;
+
+  document.documentElement.style.setProperty(
+    "--photo-filter",
+    `brightness(${b}%) contrast(${c}%) saturate(${s}%) sepia(${se}%)`,
+  );
 }
-
-Object.keys(filterInputs).forEach((key) => {
-  const slider = filterInputs[key];
-  const num = filterNumInputs[key];
-  slider.addEventListener("input", () => {
-    num.value = slider.value;
-    updatePhotoFilter();
-  });
-  num.addEventListener("input", () => {
-    let v = Number(num.value);
-    if (Number.isNaN(v)) return;
-    const min = Number(slider.min);
-    const max = Number(slider.max);
-    v = Math.min(max, Math.max(min, v));
-    slider.value = v;
-    updatePhotoFilter();
-  });
-});
-updatePhotoFilter();
-
-// 노이즈 불투명도
-
-const noiseOpacity = document.getElementById("noiseOpacity");
-const noiseOpacityNum = document.getElementById("noiseOpacityNum");
 
 function updateNoiseOpacity() {
   document.documentElement.style.setProperty(
     "--noise-opacity",
-    noiseOpacity.value / 100,
+    DOM.noiseOpacity.value / 100,
   );
 }
 
-noiseOpacity.addEventListener("input", () => {
-  noiseOpacityNum.value = noiseOpacity.value;
-  updateNoiseOpacity();
-});
-noiseOpacityNum.addEventListener("input", () => {
-  let v = Number(noiseOpacityNum.value);
-  if (Number.isNaN(v)) return;
-  v = Math.min(100, Math.max(0, v));
-  noiseOpacity.value = v;
-  updateNoiseOpacity();
-});
-updateNoiseOpacity();
+function initFilterControls() {
+  Object.keys(DOM.filterInputs).forEach((key) => {
+    const slider = DOM.filterInputs[key];
+    const numInput = DOM.filterNumInputs[key];
 
-// 캡처 (html-to-image 라이브러리 사용)
-//
-// 자체 구현한 foreignObject+XMLSerializer 방식은 DOM 내용과 무관하게
-// (완전 빈 div로도 재현됨) 브라우저가 canvas를 오염 처리해 실패했다.
-// html-to-image는 폰트/이미지 임베딩과 렌더링 타이밍을 훨씬 정교하게
-// 다루는 검증된 라이브러리라 이를 대신 사용한다.
+    slider.addEventListener("input", () => {
+      numInput.value = slider.value;
+      updatePhotoFilter();
+    });
 
-async function waitForHtmlToImage(timeoutMs = 5000) {
-  const start = Date.now();
-  while (!window.htmlToImage) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error(
-        "html-to-image 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.",
+    numInput.addEventListener("input", () => {
+      let val = Number(numInput.value);
+      if (Number.isNaN(val)) return;
+
+      val = Math.min(
+        Number(slider.max),
+        Math.max(Number(slider.min), val),
       );
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+      slider.value = val;
+      updatePhotoFilter();
+    });
+  });
+
+  DOM.noiseOpacity.addEventListener("input", () => {
+    DOM.noiseOpacityNum.value = DOM.noiseOpacity.value;
+    updateNoiseOpacity();
+  });
+
+  DOM.noiseOpacityNum.addEventListener("input", () => {
+    let val = Number(DOM.noiseOpacityNum.value);
+    if (Number.isNaN(val)) return;
+
+    val = Math.min(100, Math.max(0, val));
+    DOM.noiseOpacity.value = val;
+    updateNoiseOpacity();
+  });
+
+  updatePhotoFilter();
+  updateNoiseOpacity();
 }
 
-// html-to-image가 document.styleSheets를 순회하며 @font-face를 자체
-// 재수집(fetch)하려다 실패하는 경우가 있어(로컬 서버 재요청 이슈 등),
-// 이를 아예 끄고(skipFonts) 폰트는 document.fonts로 직접 미리
-// 로드해둔다. 이러면 canvas에 그려질 때 이미 사용 가능한 폰트라
-// html-to-image가 추가로 손댈 필요가 없다.
+
+// 7. Image Capture & Export Engine
+
 let fontsReadyPromise = null;
+
+function waitForHtmlToImage(timeoutMs = 5000) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      if (window.htmlToImage) {
+        resolve();
+      } else if (Date.now() - start > timeoutMs) {
+        reject(
+          new Error(
+            "html-to-image 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.",
+          ),
+        );
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+}
+
 function ensureCaptureFontsLoaded() {
   if (fontsReadyPromise) return fontsReadyPromise;
+
   const weights = [300, 400, 500, 600, 700, 800];
   fontsReadyPromise = Promise.all(
     weights.map((w) =>
-      document.fonts.load(`${w} 32px "PyeojinGothic"`).catch(() => {}),
+      document.fonts
+        .load(`${w} 32px "PyeojinGothic"`)
+        .catch(() => {}),
     ),
   ).then(() => document.fonts.ready);
+
   return fontsReadyPromise;
 }
 
@@ -407,20 +515,16 @@ async function captureViewport() {
   await waitForHtmlToImage();
   await ensureCaptureFontsLoaded();
 
-  const target = document.getElementById("captureArea");
+  const target = DOM.captureArea;
   const srcW = target.offsetWidth;
   const srcH = target.offsetHeight;
+  const pixelRatio = 1920 / srcW;
 
-  // 1920x1080 업스케일링 배율
-  const outW = 1920;
-  const pixelRatio = outW / srcW;
-
-  // 사진 <img>의 src가 blob: URL이면, html-to-image가 리소스를
-  // 재수집(fetch)하는 과정에서 실패할 수 있다. 캡처 직전에만
-  // 안정적인 data URL로 임시 교체하고, 끝나면 원래 blob URL로
-  // 되돌려 메모리 사용을 늘리지 않는다.
   const swapped = [];
-  const activePhotoImgs = target.querySelectorAll("img.frame-photo.is-active");
+  const activePhotoImgs = target.querySelectorAll(
+    "img.film-frame__photo.is-active",
+  );
+
   for (const img of activePhotoImgs) {
     const src = img.getAttribute("src");
     if (src && src.startsWith("blob:")) {
@@ -431,13 +535,16 @@ async function captureViewport() {
         swapped.push({ img, original: src });
         img.src = dataUrl;
       } catch (e) {
-        console.warn("사진 blob→data URL 변환 실패, blob URL 그대로 사용", e);
+        console.warn(
+          "사진 blob→data URL 변환 실패, blob URL 그대로 사용",
+          e,
+        );
       }
     }
   }
 
   try {
-    const dataUrl = await window.htmlToImage.toPng(target, {
+    return await window.htmlToImage.toPng(target, {
       width: srcW,
       height: srcH,
       pixelRatio,
@@ -445,7 +552,6 @@ async function captureViewport() {
       backgroundColor: "#22151f",
       filter: (node) => node.tagName !== "SCRIPT",
     });
-    return dataUrl;
   } finally {
     swapped.forEach(({ img, original }) => {
       img.src = original;
@@ -454,37 +560,59 @@ async function captureViewport() {
 }
 
 function sanitizeFilenamePart(text) {
-  // 파일명에 쓸 수 없는 문자(\/:*?"<>|)와 개행 등을 제거하고 앞뒤 공백 정리
   return text.replace(/[\\/:*?"<>|\r\n]+/g, "").trim();
 }
 
 function buildCaptureFilename() {
   const pair = sanitizeFilenamePart(
-    document.getElementById("pairText").textContent || "",
+    DOM.pairText.textContent || "",
   );
   const anniversary = sanitizeFilenamePart(
-    document.getElementById("anniversaryText").textContent || "",
+    DOM.anniversaryText.textContent || "",
   );
-  const parts = ["Film", pair, anniversary].filter((p) => p !== "");
+  const parts = ["Film", pair, anniversary].filter(Boolean);
+
   return `${parts.join(" ")}.png`;
 }
 
-document.getElementById("captureBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("captureBtn");
-  btn.classList.add("is-busy");
-  try {
-    const dataUrl = await captureViewport();
-    const link = document.createElement("a");
-    link.download = buildCaptureFilename();
-    link.href = dataUrl;
-    link.click();
-  } catch (err) {
-    console.error("capture failed:", err && err.message ? err.message : err);
-    console.error("전체 에러 객체:", err);
-    alert(
-      `이미지 저장에 실패했습니다: ${err && err.message ? err.message : "알 수 없는 오류"}\n콘솔 로그를 확인해주세요.`,
-    );
-  } finally {
-    btn.classList.remove("is-busy");
-  }
-});
+function initCaptureBtn() {
+  DOM.captureBtn.addEventListener("click", async () => {
+    DOM.captureBtn.classList.add("is-busy");
+    try {
+      const dataUrl = await captureViewport();
+      const link = document.createElement("a");
+      link.download = buildCaptureFilename();
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("capture failed:", err);
+      alert(
+        `이미지 저장에 실패했습니다: ${err?.message || "알 수 없는 오류"}\n콘솔 로그를 확인해주세요.`,
+      );
+    } finally {
+      DOM.captureBtn.classList.remove("is-busy");
+    }
+  });
+}
+
+
+// 8. Initialization
+
+function init() {
+  renderSprockets("spTop");
+  renderSprockets("spBottom");
+  renderBarcodes("filmBarcodes");
+
+  initTextBindings();
+  fitStageToViewport();
+  initPhotoControls();
+  initFilterControls();
+  initCaptureBtn();
+
+  window.addEventListener("resize", () => {
+    fitStageToViewport();
+    renderBarcodes("filmBarcodes");
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
