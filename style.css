@@ -29,7 +29,7 @@
 /* Base Styles & Reset */
 
 :root {
-  --sidebar-w: 320px;
+  --sidebar-w: 400px;
 
   --bg: #fafafa;
   --line: #ddd;
@@ -113,7 +113,7 @@ button {
   width: 80px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgb(238, 238, 238);
+  border-right: 1px solid var(--line);
   background: var(--bg);
   overflow-y: auto;
 }
@@ -135,7 +135,7 @@ button {
 }
 
 .tabBtn:hover {
-  background: rgb(238, 238, 238);
+  background: var(--line);
   color: var(--ink);
 }
 
@@ -188,6 +188,7 @@ button {
 }
 
 /* Save, Capture, Reset */
+
 .saveBtn,
 .captureBtn,
 .resetBtn {
@@ -206,22 +207,62 @@ button {
 
 .saveBtn,
 .captureBtn {
-  border: 1px solid white;
+  border: 1px solid var(--bg);
   background: var(--ink);
-  color: white;
+  color: var(--bg);
 }
 
 .resetBtn {
   border: 1px solid var(--red);
   background: var(--red);
-  color: white;
-	margin: 0;
+  color: var(--bg);
+  margin: 0;
+}
+
+.sidebar__export-row {
+  display: flex;
+  gap: 6px;
 }
 
 .saveBtn:hover,
 .captureBtn:hover,
 .resetBtn:hover {
   opacity: 0.8;
+}
+
+.sidebar__range-row {
+  display: flex;
+  word-break: keep-all;
+  margin: 4px 0;
+	gap: 16px;
+  justify-content: space-between;
+}
+
+.sidebar__range-label {
+	color: var(--sub);
+}
+
+.sidebar__range {
+	width: 100%;
+}
+
+.sidebar__number {
+	font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  text-align: center;
+}
+
+.sidebar__number::-webkit-outer-spin-button,
+.sidebar__number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.sidebar__number[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* Viewport & Film Stage */
