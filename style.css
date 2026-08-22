@@ -146,7 +146,9 @@ button {
 }
 
 .sidebar__panels {
-  padding: 18px 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 18px;
   overflow-y: auto;
 }
 
@@ -185,22 +187,10 @@ button {
     border-color 0.15s ease;
 }
 
-.sidebar__input:focus {
-  border-color: var(--filmOut);
-  background: white;
-}
-
-.sidebar__hint {
-  padding: 6px 10px;
-  margin-top: 10px;
-  border: 1px solid rgba(var(--ink2), 0.2);
-  border-radius: 8px;
-  font-size: 12px;
-  color: rgba(var(--ink2), 0.8);
-  background: var(--bg);
-}
-
-.btn {
+/* Save, Capture, Reset */
+.saveBtn,
+.captureBtn,
+.resetBtn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,55 +204,24 @@ button {
   cursor: pointer;
 }
 
-.btn--primary {
+.saveBtn,
+.captureBtn {
   border: 1px solid white;
   background: var(--ink);
   color: white;
 }
 
-.btn--danger {
+.resetBtn {
   border: 1px solid var(--red);
   background: var(--red);
   color: white;
+	margin: 0;
 }
 
-.btn--primary:hover,
-.btn--danger:hover {
-  opacity: 0.85;
-}
-
-.sidebar__range-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--sub);
-  white-space: nowrap;
-}
-
-.sidebar__range {
-  flex: 1;
-}
-
-.sidebar__number {
-  font-size: 12px;
-  text-align: center;
-  width: 36px;
-  height: 24px;
-  padding: 2px 4px;
-  border: 1px solid rgba(var(--ink2), 0.2);
-  border-radius: 4px;
-}
-
-.sidebar__number::-webkit-outer-spin-button,
-.sidebar__number::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.sidebar__number[type="number"] {
-  -moz-appearance: textfield;
+.saveBtn:hover,
+.captureBtn:hover,
+.resetBtn:hover {
+  opacity: 0.8;
 }
 
 /* Viewport & Film Stage */

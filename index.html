@@ -8,26 +8,23 @@
 
 	<link rel="stylesheet" href="./font.css" />
 	<link rel="stylesheet" href="./style.css" />
-
-	<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
 </head>
 
 <body>
 	<!-- Sidebar -->
 	<aside class="sidebar">
 		<header class="sidebar__header">
-			<button type="button" class="btn btn--primary" id="saveBtn">
+			<button class="saveBtn" id="saveBtn" onclick="manualSave()">
 				현재 상태 저장
 			</button>
-			<button type="button" class="btn btn--primary" id="captureBtn">
+			<button class="captureBtn" id="captureBtn" onclick="captureImage()">
 				이미지로 저장
 			</button>
-
-			<button type="button" class="btn btn--danger" id="resetBtn">
+			<button class="resetBtn" id="resetBtn" onclick="requestReset()">
 				초기화
 			</button>
 		</header>
-
+ 
 		<div class="sidebar__body">
 			<nav class="sidebar__tabs">
 				<button class="tabBtn active" data-tab="text" onclick="switchTab('text')">
@@ -40,20 +37,28 @@
 
 			<div class="sidebar__panels">
 				<section class="tab-panel active" id="panel-text">
-					<h2 class="sidebar__label" for="inputPair">페어명</h2>
+					<h2 class="sidebar__label" for="inputPair">
+						페어명
+					</h2>
 					<input class="sidebar__input" type="text" id="inputPair" value="페어명" />
 
-					<h2 class="sidebar__label" for="inputAnniversary">기념일</h2>
+					<h2 class="sidebar__label" for="inputAnniversary">
+						기념일
+					</h2>
 					<input class="sidebar__input" type="text" id="inputAnniversary" value="기념일 (최대 8글자)" pattern="[0-9]*"
 						maxlength="8" />
 
-					<h2 class="sidebar__label" for="inputCenter">프레임 번호</h2>
+					<h2 class="sidebar__label" for="inputCenter">
+						프레임 번호
+					</h2>
 					<input class="sidebar__input" type="text" id="inputCenter" value="01" inputmode="numeric" pattern="[0-9]*"
 						maxlength="2" />
 				</section>
 
 				<section class="tab-panel" id="panel-photo">
-					<h2 class="sidebar__label" for="photoInput">사진</h2>
+					<h2 class="sidebar__label" for="photoInput">
+						사진
+					</h2>
 					<input class="sidebar__input sidebar__input--file" type="file" id="photoInput" accept="image/*" />
 
 					<div class="sidebar__range-row">
@@ -207,6 +212,7 @@
 		</div>
 	</div>
 
+	<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
 	<script src="./script.js"></script>
 </body>
 

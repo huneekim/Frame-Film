@@ -1,4 +1,4 @@
-// 1. Constants & State Management
+// Constants & State Management
 
 const FRAME_CONFIG = {
   WIDTH: 960,
@@ -72,7 +72,7 @@ const DOM = {
   ),
 };
 
-// 2. Film UI Rendering (Sprockets & Barcodes)
+// Film UI Rendering (Sprockets & Barcodes)
 
 function renderSprockets(containerId) {
   const container = document.getElementById(containerId);
@@ -194,7 +194,7 @@ function renderBarcodes(containerId) {
   container.innerHTML = html;
 }
 
-// 3. Text & Frame Number Binding
+// Text & Frame Number Binding
 
 function bindInputToText(inputEl, targetEl) {
   inputEl.addEventListener("input", () => {
@@ -251,7 +251,7 @@ function initTextBindings() {
   updateFrameNumbers();
 }
 
-// 4. Viewport Auto Fit
+// Viewport Auto Fit
 
 function fitStageToViewport() {
   const scale = Math.min(
@@ -267,7 +267,7 @@ function fitStageToViewport() {
   DOM.scaleWrapper.style.height = `${FRAME_CONFIG.STAGE_H * scale}px`;
 }
 
-// 5. Photo Operations (Upload, Render, Drag & Scale)
+// Photo Operations (Upload, Render, Drag & Scale)
 
 function renderPhotoTransform() {
   if (!photoState.naturalW) return;
@@ -392,7 +392,7 @@ function initPhotoControls() {
   window.addEventListener("mouseup", onPointerUp);
 }
 
-// 6. Filter Controls
+// Filter Controls
 
 function updatePhotoFilter() {
   const b = DOM.filterInputs.brightness.value;
@@ -454,7 +454,7 @@ function initFilterControls() {
   updateNoiseOpacity();
 }
 
-// 7. Image Capture & Export Engine
+// Image Capture & Export Engine
 
 let fontsReadyPromise = null;
 
@@ -586,7 +586,7 @@ function initCaptureBtn() {
   });
 }
 
-// 8. Initialization
+// Initialization
 
 function init() {
   renderSprockets("spTop");
@@ -607,7 +607,7 @@ function init() {
 
 document.addEventListener("DOMContentLoaded", init);
 
-// 9. sidebar tab navigation
+// sidebar tab navigation
 function switchTab(tabName) {
   document.querySelectorAll(".tabBtn").forEach((btn) => {
     btn.classList.toggle(
@@ -623,4 +623,18 @@ function switchTab(tabName) {
         panel.id === `panel-${tabName}`,
       );
     });
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error(
+      "저장된 상태를 불러오지 못했습니다.",
+      err,
+    );
+    return null;
+  }
 }
