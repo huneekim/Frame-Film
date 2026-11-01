@@ -5,28 +5,13 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>HUNEE Pair Frame: Movie Film</title>
-
-	<link rel="stylesheet" href="./font.css" />
-	<link rel="stylesheet" href="./style.css" />
+	<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 	<!-- Sidebar -->
-	<aside class="sidebar">
-		<header class="sidebar__header">
-			<button class="saveBtn" id="saveBtn" onclick="manualSave()">
-				현재 상태 저장
-			</button>
-			<button class="captureBtn" id="captureBtn" onclick="captureImage()">
-				이미지로 저장
-			</button>
-			<button class="resetBtn" id="resetBtn" onclick="requestReset()">
-				초기화
-			</button>
-		</header>
- 
-		<div class="sidebar__body">
-			<nav class="sidebar__tabs">
+	<aside class="sidebar" id="sidebar">
+		<nav class="sidebar__tabs">
 				<button class="tabBtn active" data-tab="text" onclick="switchTab('text')">
 					글자
 				</button>
@@ -34,6 +19,17 @@
 					사진
 				</button>
 			</nav>
+
+		<div class="sidebar__main">
+			<header class="sidebar__header">
+				<h2 class="sidebar__title">편집</h2>
+				<button class="resetBtn sidebar__btn" id="resetBtn" onclick="requestReset()">
+					초기화
+				</button>
+				<button class="sidebar__btn" id="sidebarClose" type="button" aria-label="사이드바 닫기">
+					닫기
+				</button>
+			</header>
 
 			<div class="sidebar__panels">
 				<section class="tab-panel active" id="panel-text">
@@ -104,8 +100,18 @@
 					</div>
 				</section>
 			</div>
+
+			<footer class="sidebar__footer">
+				<button class="saveBtn" id="saveBtn" onclick="manualSave()">
+					현재 상태 저장
+				</button>
+				<button class="captureBtn" id="captureBtn" onclick="captureImage()">
+					이미지로 저장
+				</button>
+			</footer>
 		</div>
 	</aside>
+	<button class="sidebar-open" id="sidebarOpen" type="button" hidden>편집</button>
 
 	<!-- main -->
 	<main class="viewport">
@@ -214,6 +220,20 @@
 
 	<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
 	<script src="./script.js"></script>
+	<script>
+		// 사이드바 열기 / 닫기
+		(function () {
+			const sidebar = document.getElementById('sidebar');
+			const openBtn = document.getElementById('sidebarOpen');
+			function toggle(show) {
+				sidebar.hidden = !show;
+				openBtn.hidden = show;
+				window.dispatchEvent(new Event('resize')); // 화면 맞춤 로직이 있다면 다시 계산
+			}
+			document.getElementById('sidebarClose').addEventListener('click', () => toggle(false));
+			openBtn.addEventListener('click', () => toggle(true));
+		})();
+	</script>
 </body>
 
 </html>
