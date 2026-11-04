@@ -638,3 +638,31 @@ function loadState() {
     return null;
   }
 }
+// 밝은 / 어두운 테마 전환
+(function () {
+  const btn = document.getElementById("theme");
+  const KEY = "pair-frame-theme";
+  if (!btn) return;
+
+  function apply(light) {
+    document.body.classList.toggle("light", light);
+    const label = light ? "어두운 테마로 전환" : "밝은 테마로 전환";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+    btn.setAttribute("aria-pressed", String(light));
+  }
+
+  let saved = null;
+  try {
+    saved = localStorage.getItem(KEY);
+  } catch (e) {}
+  apply(saved === "light");
+
+  btn.addEventListener("click", () => {
+    const light = !document.body.classList.contains("light");
+    apply(light);
+    try {
+      localStorage.setItem(KEY, light ? "light" : "dark");
+    } catch (e) {}
+  });
+})();
